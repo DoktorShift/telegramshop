@@ -473,20 +473,24 @@ class TelegramBot:
 
         title = escape_html(self.shop.title)
         desc = escape_html(self.shop.description or "")
-        text = f"🛍 <b>{title}</b>\n"
+
+        text = f"<b>{title}</b>\n"
+        text += f"{SEP}\n\n"
         if desc:
-            text += f"\n{desc}\n"
+            text += f"{desc}\n\n"
         text += (
-            f"\n{SEP}\n"
-            f"Welcome! Browse our products and pay\n"
-            f"instantly with ⚡ Lightning.\n"
+            "⚡ <b>Lightning-powered shop</b>\n"
+            "Browse products, pay instantly, track orders\n"
+            "— all right here in Telegram.\n"
         )
 
         tma_url = self.tma_url
         buttons = [
-            [{"text": "🛍 Open Shop", "web_app": {"url": tma_url}}],
-            [{"text": "📦 My Orders", "callback_data": "orders"}],
-            [{"text": "📖 Help", "callback_data": "help_cb"}],
+            [{"text": "🛍  Open Shop", "web_app": {"url": tma_url}}],
+            [
+                {"text": "📦 Orders", "web_app": {"url": tma_url}},
+                {"text": "📖 Help", "web_app": {"url": tma_url}},
+            ],
         ]
         keyboard = self._inline_keyboard(buttons)
         await self.send_message(chat_id, text, reply_markup=keyboard)
