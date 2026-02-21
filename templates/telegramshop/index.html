@@ -1,0 +1,2524 @@
+{% extends "base.html" %}
+{% from "macros.jinja" import window_vars with context %}
+
+{% block scripts %}
+{{ window_vars(user) }}
+<script src="{{ static_url_for('telegramshop/static', path='js/index.js') }}"></script>
+{% endblock %}
+
+{% block styles %}
+<style>
+  /* Stat Cards */
+  .stat-card {
+    border-radius: 8px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+  }
+  .stat-card-alert {
+    border-color: var(--q-primary) !important;
+    background: rgba(var(--q-primary-rgb, 25,118,210), 0.03);
+  }
+  .stat-card-warn {
+    border-color: var(--q-negative) !important;
+    background: rgba(229,57,53,0.03);
+  }
+  .avatar_style {
+    border-radius: 8px;
+  }
+  .custom_border {
+    border: 1px solid rgba(128, 128, 128, 0.15) !important;
+  }
+  .custom_select .q-field__control {
+    border-radius: 8px !important;
+  }
+  .search-input .q-field__control {
+    border-radius: 8px !important;
+    height: 36px;
+  }
+  .search-input .q-field__native {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .search-input .q-field__marginal {
+    height: 36px;
+  }
+
+  /* Table */
+  .table-border-soft .q-table__bottom,
+  .table-border-soft td,
+  .table-border-soft th,
+  .table-border-soft thead,
+  .table-border-soft tr {
+    border-color: rgba(128, 128, 128, 0.15) !important;
+  }
+
+  /* Dialogs */
+  .dialog_style {
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .shop-dialog {
+    width: 580px;
+    max-width: 95vw;
+  }
+  .shop-dialog .q-bar {
+    border-radius: 12px 12px 0 0;
+  }
+  @media (max-width: 599px) {
+    .shop-dialog {
+      width: 100%;
+      max-width: 95vw;
+    }
+  }
+
+  /* Info Banners - Theme compatible */
+  .info-banner {
+    background: rgba(128, 128, 128, 0.1) !important;
+    border-left: 3px solid currentColor;
+  }
+  .info-banner .q-banner__avatar {
+    color: inherit;
+  }
+  .info-banner .q-banner__content {
+    color: inherit;
+    opacity: 0.9;
+  }
+  .info-banner--info {
+    border-left-color: var(--q-primary);
+    color: var(--q-primary);
+  }
+  .info-banner--warning {
+    border-left-color: #ff9800;
+    color: #ff9800;
+  }
+  .info-banner--success {
+    border-left-color: #4caf50;
+    color: #4caf50;
+  }
+  .body--dark .info-banner .q-banner__content,
+  .body--dark .info-banner .text-caption,
+  .body--dark .info-banner .text-body2 {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+  .body--light .info-banner .q-banner__content,
+  .body--light .info-banner .text-caption,
+  .body--light .info-banner .text-body2 {
+    color: rgba(0, 0, 0, 0.75) !important;
+  }
+
+  /* Info Box */
+  .info-box .q-expansion-item {
+    border-top: 1px solid rgba(128, 128, 128, 0.12);
+  }
+  .info-box .q-expansion-item:first-of-type {
+    border-top: none;
+  }
+
+  /* Info Drawer Header */
+  .info-hero {
+    position: relative;
+    background: rgba(128, 128, 128, 0.04);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.12);
+    padding: 20px 20px 16px;
+    text-align: center;
+  }
+  .info-hero img {
+    width: 100%;
+    max-width: 240px;
+    margin-bottom: 14px;
+  }
+  .info-hero .info-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .info-hero .info-subtitle {
+    font-size: 0.8rem;
+    opacity: 0.55;
+    line-height: 1.4;
+  }
+
+  /* Info Section Styling */
+  .info-section-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    opacity: 0.4;
+    padding: 14px 16px 6px;
+  }
+  .info-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+  }
+  .info-step-num {
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .info-step-text {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    padding-top: 2px;
+  }
+  .info-step-text a {
+    color: var(--q-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .info-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.07);
+    line-height: 1.4;
+  }
+  .body--dark .info-chip {
+    background: rgba(255, 255, 255, 0.07);
+  }
+  .info-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.04);
+    margin-bottom: 6px;
+  }
+  .body--dark .info-tip {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .info-tip-icon {
+    min-width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .info-tip-text {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    padding-top: 4px;
+  }
+  .info-tip-text b {
+    font-weight: 600;
+  }
+  .info-link-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s;
+    border-radius: 8px;
+    margin: 0 8px;
+  }
+  .info-link-item:hover {
+    background: rgba(128, 128, 128, 0.08);
+  }
+
+  /* Custom Expansion */
+  .custom_expansion_style {
+    background: rgba(128, 128, 128, 0.06);
+    border-radius: 8px;
+  }
+
+  /* Custom Separator */
+  .custom_seperator {
+    background-color: rgba(128, 128, 128, 0.15) !important;
+    height: 1px;
+  }
+
+  /* Messages */
+  .msg-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  .msg-bubble {
+    border-radius: 14px;
+    padding: 10px 14px;
+    max-width: 80%;
+    margin-bottom: 2px;
+    font-size: 0.9rem;
+  }
+  .msg-in {
+    background: rgba(128, 128, 128, 0.1);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .msg-out {
+    background: var(--q-primary);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  /* Status Dot */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot--live {
+    background: var(--q-positive);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  .status-dot--stopped {
+    background: rgba(128, 128, 128, 0.3);
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Setup Steps */
+  .setup-step {
+    padding: 8px 0;
+  }
+  .setup-step:not(:last-child) {
+    border-bottom: 1px dashed rgba(128, 128, 128, 0.12);
+  }
+
+  /* Row Hover */
+  .row-clickable:hover {
+    background: rgba(128, 128, 128, 0.04);
+  }
+</style>
+{% endblock %}
+
+{% block page %}
+<div class="row q-col-gutter-md">
+
+  <!-- ====== MAIN CONTENT ====== -->
+  <div class="col-12 q-gutter-y-md">
+
+    <!-- Wallet Selector + Info -->
+    <div class="row items-center q-mb-md">
+      <div class="col-auto">
+        <q-select
+          v-model="selectedWallet"
+          :options="walletsWithCount"
+          emit-value
+          map-options
+          borderless
+          dense
+          filled
+          class="custom_select"
+          style="min-width: 200px"
+        >
+          <template v-slot:prepend>
+            <q-icon name="account_balance_wallet" color="primary" size="xs"></q-icon>
+          </template>
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                {% raw %}{{ scope.opt.label }}{% endraw %}
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="primary">
+                  {% raw %}{{ scope.opt.count }}{% endraw %}
+                </q-badge>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+      </div>
+      <q-space></q-space>
+      <div class="col-auto">
+        <q-btn
+          flat
+          round
+          color="primary"
+          icon="info"
+          @click="drawerRight = true"
+        >
+          <q-tooltip>Extension Info</q-tooltip>
+        </q-btn>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row q-col-gutter-sm q-mb-md">
+      <div class="col-6 col-sm-3">
+        <q-card
+          class="stat-card no-border no-shadow custom_border cursor-pointer"
+          @click="activeTab = 'shops'"
+        >
+          <q-item>
+            <q-item-section>
+              <q-item-label class="text-caption text-uppercase"
+                style="letter-spacing: 0.5px; opacity: 0.7">Shops</q-item-label>
+              <q-item-label>
+                <div class="text-h4 text-weight-bolder">
+                  {% raw %}{{ stats.shops }}{% endraw %}
+                </div>
+              </q-item-label>
+              <q-item-label caption>
+                <q-badge
+                  v-if="stats.shops_live > 0"
+                  color="positive"
+                  text-color="white"
+                  class="q-mr-xs"
+                  style="font-size: 10px"
+                >{% raw %}{{ stats.shops_live }}{% endraw %} live</q-badge>
+                <span v-if="stats.customers > 0" class="text-caption">
+                  {% raw %}{{ stats.customers }}{% endraw %} customers
+                </span>
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-avatar size="36px" square class="bg-primary avatar_style text-white">
+                <q-icon name="store" size="20px"></q-icon>
+              </q-avatar>
+            </q-item-section>
+          </q-item>
+        </q-card>
+      </div>
+      <div class="col-6 col-sm-3">
+        <q-card
+          class="stat-card no-border no-shadow custom_border cursor-pointer"
+          @click="activeTab = 'orders'"
+        >
+          <q-item>
+            <q-item-section>
+              <q-item-label class="text-caption text-uppercase"
+                style="letter-spacing: 0.5px; opacity: 0.7">Revenue</q-item-label>
+              <q-item-label>
+                <div class="text-h4 text-weight-bolder text-positive">
+                  {% raw %}{{ stats.revenue_sats.toLocaleString() }}{% endraw %}
+                  <span class="text-body2 text-weight-medium" style="opacity: 0.6">sats</span>
+                </div>
+              </q-item-label>
+              <q-item-label caption>
+                {% raw %}{{ stats.orders_paid }}{% endraw %} paid
+                <span v-if="stats.orders_today > 0" class="text-positive text-weight-bold">
+                  &middot; {% raw %}{{ stats.orders_today }}{% endraw %} today
+                </span>
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-avatar size="36px" square class="bg-positive avatar_style text-white">
+                <q-icon name="bolt" size="20px"></q-icon>
+              </q-avatar>
+            </q-item-section>
+          </q-item>
+        </q-card>
+      </div>
+      <div class="col-6 col-sm-3">
+        <q-card
+          class="stat-card no-border no-shadow custom_border cursor-pointer"
+          :class="stats.unread_messages > 0 ? 'stat-card-alert' : ''"
+          @click="activeTab = 'messages'"
+        >
+          <q-item>
+            <q-item-section>
+              <q-item-label class="text-caption text-uppercase"
+                style="letter-spacing: 0.5px; opacity: 0.7">Messages</q-item-label>
+              <q-item-label>
+                <div class="text-h4 text-weight-bolder"
+                     :class="stats.unread_messages > 0 ? 'text-primary' : ''">
+                  {% raw %}{{ stats.unread_messages }}{% endraw %}
+                  <span class="text-body2 text-weight-medium" style="opacity: 0.6">unread</span>
+                </div>
+              </q-item-label>
+              <q-item-label caption>
+                {% raw %}{{ stats.total_messages }}{% endraw %} total
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-avatar size="36px" square
+                :class="stats.unread_messages > 0 ? 'bg-primary' : 'bg-grey-5'"
+                class="avatar_style text-white"
+              >
+                <q-icon name="chat" size="20px"></q-icon>
+              </q-avatar>
+            </q-item-section>
+          </q-item>
+        </q-card>
+      </div>
+      <div class="col-6 col-sm-3">
+        <q-card
+          class="stat-card no-border no-shadow custom_border cursor-pointer"
+          :class="stats.open_returns > 0 ? 'stat-card-warn' : ''"
+          @click="activeTab = 'returns'"
+        >
+          <q-item>
+            <q-item-section>
+              <q-item-label class="text-caption text-uppercase"
+                style="letter-spacing: 0.5px; opacity: 0.7">Returns</q-item-label>
+              <q-item-label>
+                <div class="text-h4 text-weight-bolder"
+                     :class="stats.open_returns > 0 ? 'text-negative' : ''">
+                  {% raw %}{{ stats.open_returns }}{% endraw %}
+                  <span class="text-body2 text-weight-medium" style="opacity: 0.6">open</span>
+                </div>
+              </q-item-label>
+              <q-item-label caption>
+                {% raw %}{{ stats.total_returns }}{% endraw %} total
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-avatar size="36px" square
+                :class="stats.open_returns > 0 ? 'bg-negative' : 'bg-grey-5'"
+                class="avatar_style text-white"
+              >
+                <q-icon name="replay" size="20px"></q-icon>
+              </q-avatar>
+            </q-item-section>
+          </q-item>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- View Toggle -->
+    <q-btn-toggle
+      v-model="activeTab"
+      no-caps
+      style="border-radius: 8px"
+      class="custom_border no-shadow"
+      :options="[
+        {value: 'shops', slot: 'shops'},
+        {value: 'orders', slot: 'orders'},
+        {value: 'messages', slot: 'messages'},
+        {value: 'returns', slot: 'returns'},
+        {value: 'commercials', slot: 'commercials'}
+      ]"
+    >
+      <template v-slot:shops>
+        <div class="row items-center no-wrap">
+          <q-icon name="store" left size="xs"></q-icon>
+          <div class="text-center">Shops</div>
+        </div>
+      </template>
+      <template v-slot:orders>
+        <div class="row items-center no-wrap">
+          <q-icon name="receipt_long" left size="xs"></q-icon>
+          <div class="text-center">Orders</div>
+        </div>
+      </template>
+      <template v-slot:messages>
+        <div class="row items-center no-wrap">
+          <q-icon name="chat" left size="xs"></q-icon>
+          <div class="text-center">Messages</div>
+          <q-badge
+            v-if="stats.unread_messages > 0"
+            color="red"
+            class="text-weight-bold"
+            floating
+          >
+            {% raw %}{{ stats.unread_messages }}{% endraw %}
+          </q-badge>
+        </div>
+      </template>
+      <template v-slot:returns>
+        <div class="row items-center no-wrap">
+          <q-icon name="replay" left size="xs"></q-icon>
+          <div class="text-center">Returns</div>
+          <q-badge
+            v-if="stats.open_returns > 0"
+            color="orange"
+            class="text-weight-bold"
+            floating
+          >
+            {% raw %}{{ stats.open_returns }}{% endraw %}
+          </q-badge>
+        </div>
+      </template>
+      <template v-slot:commercials>
+        <div class="row items-center no-wrap">
+          <q-icon name="campaign" left size="xs"></q-icon>
+          <div class="text-center">Marketing</div>
+        </div>
+      </template>
+    </q-btn-toggle>
+
+    <!-- ======== SHOPS CARD ======== -->
+    <q-card
+      v-if="activeTab === 'shops'"
+      class="q-mt-md no-shadow no-border custom_border stat-card"
+    >
+      <q-card-section class="q-pa-none">
+        <div class="row items-center no-wrap q-pa-md q-pb-none">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">Telegram Shops</h5>
+            <p class="text-caption text-grey q-mb-none">
+              Manage your Telegram bot shops
+            </p>
+          </div>
+          <div class="col-auto row q-gutter-sm items-center">
+            <q-input
+              v-model="shopFilter"
+              dense
+              filled
+              borderless
+              placeholder="Search..."
+              class="search-input"
+              style="max-width: 160px"
+              clearable
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" size="xs"></q-icon>
+              </template>
+            </q-input>
+            <q-btn
+              unelevated
+              color="primary"
+              class="avatar_style"
+              @click="openShopDialog()"
+              no-caps
+            >
+              <q-icon name="add" class="q-mr-sm"></q-icon>
+              New Shop
+            </q-btn>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-if="!loading && filteredShops.length === 0"
+          class="text-center q-pa-xl"
+        >
+          <q-icon name="send" size="64px" color="grey-5"></q-icon>
+          <h6 class="q-mt-md q-mb-sm">No shops yet</h6>
+          <p class="text-grey q-mb-md">
+            Create a Telegram bot to start selling your products with Lightning payments
+          </p>
+          <q-btn
+            unelevated
+            color="primary"
+            class="avatar_style"
+            @click="openShopDialog()"
+            no-caps
+          >
+            <q-icon name="add" class="q-mr-sm"></q-icon>
+            Create Your First Shop
+          </q-btn>
+        </div>
+
+        <!-- Shops Table -->
+        <q-table
+          v-else
+          flat
+          dense
+          :rows="filteredShops"
+          :columns="shopColumns"
+          row-key="id"
+          :loading="loading"
+          class="table-border-soft"
+          :pagination="{rowsPerPage: 10}"
+          table-header-class="text-grey"
+        >
+          <template v-slot:body-cell-title="props">
+            <q-td :props="props">
+              <span class="text-weight-medium">
+                {% raw %}{{ props.row.title }}{% endraw %}
+              </span>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-bot="props">
+            <q-td :props="props">
+              <span v-if="props.row.bot_username">
+                <a
+                  :href="'https://t.me/' + props.row.bot_username"
+                  target="_blank"
+                  class="text-caption"
+                  style="text-decoration: none"
+                >
+                  @{% raw %}{{ props.row.bot_username }}{% endraw %}
+                </a>
+                <q-btn
+                  flat dense round size="xs"
+                  icon="content_copy"
+                  color="grey"
+                  class="q-ml-xs"
+                  @click.stop="copyText('https://t.me/' + props.row.bot_username)"
+                >
+                  <q-tooltip>Copy bot link</q-tooltip>
+                </q-btn>
+              </span>
+              <span v-else class="text-caption text-grey-5">
+                {% raw %}{{ props.row.bot_token ? 'Not running' : '—' }}{% endraw %}
+              </span>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-admin_chat="props">
+            <q-td :props="props">
+              <span v-if="props.row.admin_chat_id" class="text-caption">
+                {% raw %}{{ props.row.admin_chat_id }}{% endraw %}
+                <q-btn
+                  flat dense round size="xs"
+                  icon="content_copy"
+                  color="grey"
+                  class="q-ml-xs"
+                  @click.stop="copyText(props.row.admin_chat_id)"
+                >
+                  <q-tooltip>Copy Chat ID</q-tooltip>
+                </q-btn>
+              </span>
+              <span v-else class="text-grey-5">—</span>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-badge
+                :color="props.row.is_enabled ? 'positive' : 'grey'"
+                class="q-pa-sm"
+                square
+              >
+                <span
+                  class="status-dot q-mr-xs"
+                  :class="props.row.is_enabled ? 'status-dot--live' : 'status-dot--stopped'"
+                  style="margin-right: 6px"
+                ></span>
+                {% raw %}{{ props.row.is_enabled ? 'Live' : 'Stopped' }}{% endraw %}
+              </q-badge>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn
+                flat dense round
+                :color="props.row.is_enabled ? 'grey' : 'positive'"
+                @click="toggleShop(props.row)"
+              >
+                <q-icon
+                  :name="props.row.is_enabled ? 'stop' : 'play_arrow'"
+                  size="xs"
+                  class="q-ma-xs"
+               ></q-icon>
+                <q-tooltip>
+                  {% raw %}{{ props.row.is_enabled ? 'Stop Bot' : 'Start Bot' }}{% endraw %}
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                flat dense round
+                color="grey"
+                @click="refreshShop(props.row)"
+              >
+                <q-icon name="refresh" size="xs" class="q-ma-xs"></q-icon>
+                <q-tooltip>Refresh Products</q-tooltip>
+              </q-btn>
+              <q-btn
+                flat dense round
+                color="grey"
+                @click="openShopDialog(props.row)"
+              >
+                <q-icon name="edit" size="xs" class="q-ma-xs"></q-icon>
+                <q-tooltip>Edit</q-tooltip>
+              </q-btn>
+              <q-btn
+                flat dense round
+                color="negative"
+                @click="openDeleteDialog(props.row)"
+              >
+                <q-icon name="delete" size="xs" class="q-ma-xs"></q-icon>
+                <q-tooltip>Delete</q-tooltip>
+              </q-btn>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
+    <!-- ======== ORDERS CARD ======== -->
+    <q-card
+      v-if="activeTab === 'orders'"
+      class="q-mt-md no-shadow no-border custom_border stat-card"
+    >
+      <q-card-section class="q-pa-none">
+        <div class="row items-center no-wrap q-pa-md q-pb-none">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">Orders</h5>
+            <p class="text-caption text-grey q-mb-none">
+              Track and manage customer orders
+            </p>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row q-col-gutter-sm q-ml-sm q-mb-xs items-center">
+          <div class="col-6 col-sm-3">
+            <q-select
+              v-model="ordersFilter.shop_id"
+              :options="shopOptions"
+              emit-value
+              map-options
+              borderless
+              dense
+              filled
+              options-dense
+              class="custom_select"
+           ></q-select>
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-select
+              v-model="ordersFilter.status"
+              :options="orderStatusOptions"
+              emit-value
+              map-options
+              borderless
+              dense
+              filled
+              options-dense
+              class="custom_select"
+           ></q-select>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-if="orders.length === 0 && !loading"
+          class="text-center q-pa-xl"
+        >
+          <q-icon name="receipt_long" size="64px" color="grey-5"></q-icon>
+          <h6 class="q-mt-md q-mb-sm">No orders yet</h6>
+          <p class="text-grey q-mb-md">
+            Orders will appear here once customers start purchasing
+          </p>
+        </div>
+
+        <!-- Orders Table -->
+        <q-table
+          v-if="orders.length > 0 || loading"
+          flat
+          dense
+          :rows="orders"
+          :columns="orderColumns"
+          row-key="id"
+          :loading="loading"
+          class="table-border-soft"
+          :pagination="{rowsPerPage: 10}"
+          table-header-class="text-grey"
+        >
+          <template v-slot:body="props">
+            <q-tr
+              :props="props"
+              @click="props.expand = !props.expand"
+              class="cursor-pointer row-clickable"
+            >
+              <q-td
+                v-for="col in props.cols"
+                :key="col.name"
+                :props="props"
+              >
+                <template v-if="col.name === 'expand'">
+                  <q-btn
+                    size="xs"
+                    color="accent"
+                    round
+                    dense
+                    flat
+                    :icon="props.expand ? 'expand_less' : 'expand_more'"
+                  ></q-btn>
+                </template>
+                <template v-else-if="col.name === 'customer'">
+                  <a
+                    v-if="props.row.telegram_username && /^\w+$/.test(props.row.telegram_username)"
+                    :href="'https://t.me/' + props.row.telegram_username"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-primary"
+                    @click.stop
+                  >@{% raw %}{{ props.row.telegram_username }}{% endraw %}</a>
+                  <span v-else-if="props.row.telegram_username">
+                    {% raw %}{{ props.row.telegram_username }}{% endraw %}
+                  </span>
+                  <span v-else class="text-grey">Chat #{% raw %}{{ props.row.telegram_chat_id }}{% endraw %}</span>
+                </template>
+                <template v-else-if="col.name === 'status'">
+                  <q-badge
+                    :color="orderStatusColor(props.row.status)"
+                    :label="props.row.status"
+                    class="q-pa-sm"
+                    square
+                  ></q-badge>
+                  <q-badge
+                    v-if="props.row.fulfillment_status"
+                    :color="fulfillmentColor(props.row.fulfillment_status)"
+                    :label="props.row.fulfillment_status"
+                    class="q-ml-xs q-pa-sm"
+                    square
+                  ></q-badge>
+                </template>
+                <template v-else-if="col.name === 'amount'">
+                  <span class="text-weight-bold">
+                    {% raw %}{{ formatSat(props.row.amount_sats) }}{% endraw %}
+                  </span>
+                  <small class="text-caption"> sats</small>
+                </template>
+                <template v-else-if="col.name === 'items'">
+                  {% raw %}{{ cartItemCount(props.row.cart_json) }}{% endraw %}
+                  <span class="text-grey"> items</span>
+                </template>
+                <template v-else-if="col.name === 'date'">
+                  {% raw %}{{ formatDate(col.value) }}{% endraw %}
+                </template>
+                <template v-else>
+                  {% raw %}{{ col.value }}{% endraw %}
+                </template>
+              </q-td>
+            </q-tr>
+            <!-- Expanded Detail -->
+            <q-tr v-show="props.expand" :props="props">
+              <q-td colspan="100%">
+                <div class="q-pa-md">
+                  <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6">
+                      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.6">
+                        Cart Items
+                      </div>
+                      <div
+                        v-for="item in parseCart(props.row.cart_json)"
+                        :key="item.product_id"
+                        class="q-mb-xs text-body2"
+                      >
+                        {% raw %}{{ item.quantity }}{% endraw %} x
+                        {% raw %}{{ item.title }}{% endraw %} &mdash;
+                        {% raw %}{{ formatSat(item.price * item.quantity) }}{% endraw %} sats
+                      </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.6">
+                        Customer
+                      </div>
+                      <div v-if="props.row.buyer_email" class="text-body2 q-mb-xs">
+                        {% raw %}{{ props.row.buyer_email }}{% endraw %}
+                      </div>
+                      <div v-if="props.row.buyer_name" class="text-body2 q-mb-xs">
+                        {% raw %}{{ props.row.buyer_name }}{% endraw %}
+                      </div>
+                      <div v-if="props.row.buyer_address" class="text-body2">
+                        <pre style="font-family: inherit; white-space: pre-line; margin: 0">{% raw %}{{ formatAddress(props.row.buyer_address) }}{% endraw %}</pre>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="props.row.fulfillment_note" class="q-mt-sm text-body2">
+                    <span class="text-weight-medium">Note:</span>
+                    {% raw %}{{ props.row.fulfillment_note }}{% endraw %}
+                  </div>
+                  <!-- Fulfillment actions -->
+                  <div v-if="canTrackFulfillment(props.row)" class="q-mt-md">
+                    <div class="custom_seperator q-mb-sm"></div>
+                    <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.6">
+                      Fulfillment
+                    </div>
+                    <q-btn-group unelevated>
+                      <q-btn
+                        v-for="fs in fulfillmentOptions"
+                        :key="fs.value"
+                        :label="fs.label"
+                        :color="props.row.fulfillment_status === fs.value ? 'primary' : undefined"
+                        :flat="props.row.fulfillment_status !== fs.value"
+                        dense
+                        no-caps
+                        size="sm"
+                        @click="updateFulfillment(props.row, fs.value)"
+                     ></q-btn>
+                    </q-btn-group>
+                  </div>
+                </div>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
+    <!-- ======== MESSAGES CARD ======== -->
+    <q-card
+      v-if="activeTab === 'messages'"
+      class="q-mt-md no-shadow no-border custom_border stat-card"
+    >
+      <q-card-section class="q-pa-none">
+        <div class="row items-center no-wrap q-pa-md q-pb-none">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">Messages</h5>
+            <p class="text-caption text-grey q-mb-none">
+              Customer conversations
+            </p>
+          </div>
+          <div class="col-auto text-caption text-grey" v-if="conversations.length > 0">
+            {% raw %}{{ conversations.length }}{% endraw %} conversations
+            <span v-if="stats.unread_messages > 0" class="q-ml-sm text-primary">
+              {% raw %}{{ stats.unread_messages }}{% endraw %} unread
+            </span>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row q-col-gutter-sm q-ml-sm q-mb-xs items-center">
+          <div class="col-6 col-sm-3">
+            <q-select
+              v-model="messagesFilter.shop_id"
+              :options="shopOptions"
+              emit-value
+              map-options
+              borderless
+              dense
+              filled
+              options-dense
+              class="custom_select"
+           ></q-select>
+          </div>
+          <div class="col-auto">
+            <q-toggle
+              v-model="messagesFilter.unread_only"
+              label="Unread only"
+              dense
+           ></q-toggle>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-if="conversations.length === 0 && !loading"
+          class="text-center q-pa-xl"
+        >
+          <q-icon name="chat" size="64px" color="grey-5"></q-icon>
+          <h6 class="q-mt-md q-mb-sm">No messages</h6>
+          <p class="text-grey q-mb-md">
+            Customer messages will appear here
+          </p>
+        </div>
+
+        <!-- Conversations Table -->
+        <q-table
+          v-if="conversations.length > 0 || loading"
+          flat
+          dense
+          :rows="conversations"
+          :columns="conversationColumns"
+          row-key="key"
+          class="table-border-soft"
+          :pagination="{rowsPerPage: 15}"
+          table-header-class="text-grey"
+        >
+          <template v-slot:body="props">
+            <q-tr
+              :props="props"
+              @click="openConversation(props.row)"
+              class="cursor-pointer row-clickable"
+              :class="{'text-weight-bold': props.row.unreadCount > 0}"
+            >
+              <q-td
+                v-for="col in props.cols"
+                :key="col.name"
+                :props="props"
+              >
+                <template v-if="col.name === 'unread'">
+                  <q-badge
+                    v-if="props.row.unreadCount > 0"
+                    color="primary"
+                    rounded
+                    :label="props.row.unreadCount"
+                  ></q-badge>
+                </template>
+                <template v-else-if="col.name === 'customer'">
+                  {% raw %}{{ props.row.username ? '@' + props.row.username : 'Customer' }}{% endraw %}
+                </template>
+                <template v-else-if="col.name === 'context'">
+                  <q-badge
+                    v-if="props.row.orderId"
+                    outline
+                    color="grey"
+                    :label="'#' + props.row.orderId.substring(0, 8)"
+                  ></q-badge>
+                  <span v-else class="text-grey-5">General</span>
+                </template>
+                <template v-else-if="col.name === 'preview'">
+                  <span class="text-body2">
+                    {% raw %}{{ truncate(props.row.lastContent, 50) }}{% endraw %}
+                  </span>
+                </template>
+                <template v-else-if="col.name === 'date'">
+                  {% raw %}{{ formatDateFrom(props.row.lastTimestamp) }}{% endraw %}
+                </template>
+                <template v-else-if="col.name === 'count'">
+                  <q-badge
+                    v-if="props.row.totalCount > 1"
+                    outline
+                    color="grey"
+                    :label="props.row.totalCount"
+                  ></q-badge>
+                </template>
+                <template v-else>
+                  {% raw %}{{ col.value }}{% endraw %}
+                </template>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
+    <!-- ======== RETURNS CARD ======== -->
+    <q-card
+      v-if="activeTab === 'returns'"
+      class="q-mt-md no-shadow no-border custom_border stat-card"
+    >
+      <q-card-section class="q-pa-none">
+        <div class="row items-center no-wrap q-pa-md q-pb-none">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">Returns</h5>
+            <p class="text-caption text-grey q-mb-none">
+              Handle return requests and refunds
+            </p>
+          </div>
+          <div class="col-auto text-caption text-grey" v-if="returns.length > 0">
+            {% raw %}{{ returns.length }}{% endraw %} returns
+            <span v-if="stats.open_returns > 0" class="q-ml-sm text-warning">
+              <q-icon name="warning" size="xs" class="q-mr-xs"></q-icon>
+              {% raw %}{{ stats.open_returns }}{% endraw %} pending
+            </span>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row q-col-gutter-sm q-ml-sm q-mb-xs items-center">
+          <div class="col-6 col-sm-3">
+            <q-select
+              v-model="returnsFilter.shop_id"
+              :options="shopOptions"
+              emit-value
+              map-options
+              borderless
+              dense
+              filled
+              options-dense
+              class="custom_select"
+           ></q-select>
+          </div>
+          <div class="col-6 col-sm-3">
+            <q-select
+              v-model="returnsFilter.status"
+              :options="returnStatusOptions"
+              emit-value
+              map-options
+              borderless
+              dense
+              filled
+              options-dense
+              class="custom_select"
+           ></q-select>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-if="returns.length === 0 && !loading"
+          class="text-center q-pa-xl"
+        >
+          <q-icon name="replay" size="64px" color="grey-5"></q-icon>
+          <h6 class="q-mt-md q-mb-sm">No returns</h6>
+          <p class="text-grey q-mb-md">
+            Return requests from customers will show up here
+          </p>
+        </div>
+
+        <!-- Returns Table -->
+        <q-table
+          v-if="returns.length > 0 || loading"
+          flat
+          dense
+          :rows="returns"
+          :columns="returnColumns"
+          row-key="id"
+          class="table-border-soft"
+          :pagination="{rowsPerPage: 10}"
+          table-header-class="text-grey"
+        >
+          <template v-slot:body="props">
+            <q-tr
+              :props="props"
+              @click="props.expand = !props.expand"
+              class="cursor-pointer row-clickable"
+            >
+              <q-td auto-width>
+                <q-btn
+                  size="xs"
+                  color="accent"
+                  round
+                  dense
+                  flat
+                  :icon="props.expand ? 'expand_less' : 'expand_more'"
+               ></q-btn>
+              </q-td>
+              <q-td
+                v-for="col in props.cols"
+                :key="col.name"
+                :props="props"
+              >
+                <template v-if="col.name === 'status'">
+                  <q-badge
+                    :color="returnStatusColor(props.row.status)"
+                    :label="props.row.status"
+                    class="q-pa-sm"
+                    square
+                 ></q-badge>
+                </template>
+                <template v-else-if="col.name === 'amount'">
+                  <span class="text-weight-bold">
+                    {% raw %}{{ formatSat(props.row.refund_amount_sats) }}{% endraw %}
+                  </span>
+                  <small class="text-caption"> sats</small>
+                </template>
+                <template v-else-if="col.name === 'order'">
+                  <code class="text-caption" style="font-size: 11px; opacity: 0.8">
+                    #{% raw %}{{ props.row.order_id.substring(0, 8) }}{% endraw %}
+                  </code>
+                </template>
+                <template v-else-if="col.name === 'items'">
+                  {% raw %}{{ returnItemsSummary(props.row.items_json) }}{% endraw %}
+                </template>
+                <template v-else-if="col.name === 'actions'">
+                  <div v-if="props.row.status === 'requested'" class="q-gutter-xs">
+                    <q-btn
+                      flat dense round
+                      color="positive"
+                      @click.stop="openApproveDialog(props.row)"
+                    >
+                      <q-icon name="check" size="xs" class="q-ma-xs"></q-icon>
+                      <q-tooltip>Approve Return</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat dense round
+                      color="negative"
+                      @click.stop="openDenyDialog(props.row)"
+                    >
+                      <q-icon name="close" size="xs" class="q-ma-xs"></q-icon>
+                      <q-tooltip>Deny Return</q-tooltip>
+                    </q-btn>
+                  </div>
+                </template>
+                <template v-else-if="col.name === 'date'">
+                  {% raw %}{{ formatDate(col.value) }}{% endraw %}
+                </template>
+                <template v-else>
+                  {% raw %}{{ col.value }}{% endraw %}
+                </template>
+              </q-td>
+            </q-tr>
+            <!-- Expanded Detail -->
+            <q-tr v-show="props.expand" :props="props">
+              <q-td colspan="100%">
+                <div class="q-pa-md">
+                  <div
+                    v-for="item in parseCart(props.row.items_json)"
+                    :key="item.product_id"
+                    class="q-mb-xs text-body2"
+                  >
+                    {% raw %}{{ item.quantity }}{% endraw %} x
+                    {% raw %}{{ item.title }}{% endraw %}
+                  </div>
+                  <div v-if="props.row.reason" class="q-mt-sm text-body2">
+                    <span class="text-weight-medium">Reason:</span>
+                    {% raw %}{{ props.row.reason }}{% endraw %}
+                  </div>
+                  <div v-if="props.row.admin_note" class="q-mt-xs text-body2">
+                    <span class="text-weight-medium">Admin Note:</span>
+                    {% raw %}{{ props.row.admin_note }}{% endraw %}
+                  </div>
+                  <div v-if="props.row.refund_method" class="q-mt-xs text-body2">
+                    <span class="text-weight-medium">Refund Method:</span>
+                    {% raw %}{{ props.row.refund_method }}{% endraw %}
+                  </div>
+                </div>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
+    <!-- ======== MARKETING CARD ======== -->
+    <div v-if="activeTab === 'commercials'">
+
+      <!-- Audience reach -->
+      <div
+        class="q-mt-md q-mb-md q-pa-md row items-center"
+        style="background: linear-gradient(135deg, rgba(100,80,200,0.08), rgba(100,80,200,0.03)); border-radius: 12px"
+      >
+        <div class="col row items-center no-wrap">
+          <div
+            class="q-mr-sm flex flex-center"
+            style="width: 36px; height: 36px; border-radius: 10px; background: rgba(100,80,200,0.12)"
+          >
+            <q-icon name="campaign" size="20px" color="primary"></q-icon>
+          </div>
+          <div>
+            <div class="text-subtitle2 text-weight-bold" style="line-height: 1.3">
+              {% raw %}{{ customers.length }}{% endraw %}
+              {% raw %}{{ customers.length === 1 ? 'customer' : 'customers' }}{% endraw %}
+              ready to hear from you
+            </div>
+            <div class="text-caption text-grey" style="line-height: 1.3">
+              Personalised messages, delivered straight to Telegram
+            </div>
+          </div>
+        </div>
+        <div class="col-auto" v-if="shops.length > 1">
+          <q-select
+            v-model="commercialsFilter.shop_id"
+            :options="shopOptions"
+            emit-value
+            map-options
+            dense
+            outlined
+            class="custom_select"
+            style="min-width: 140px"
+          ></q-select>
+        </div>
+      </div>
+
+      <!-- ===== Message type cards ===== -->
+      <div class="q-gutter-md">
+
+        <q-card
+          v-for="ct in campaignTypes"
+          :key="ct.value"
+          class="no-shadow no-border custom_border stat-card"
+        >
+          <q-card-section>
+            <!-- Header row: icon + label + toggle -->
+            <div class="row items-center no-wrap q-mb-sm">
+              <q-icon :name="ct.icon" :color="ct.color" size="md" class="q-mr-sm"></q-icon>
+              <div class="col">
+                <div class="text-subtitle1 text-weight-bold">{% raw %}{{ ct.label }}{% endraw %}</div>
+                <div class="text-caption text-grey">{% raw %}{{ ct.trigger }}{% endraw %}</div>
+              </div>
+              <q-toggle
+                :model-value="getCommercialEnabled(ct.value)"
+                :color="getCommercialEnabled(ct.value) ? 'positive' : 'grey'"
+                @update:model-value="toggleCommercialType(ct.value)"
+              >
+                <q-tooltip>
+                  {% raw %}{{ getCommercialEnabled(ct.value) ? 'Active — sending automatically' : 'Off — not sending' }}{% endraw %}
+                </q-tooltip>
+              </q-toggle>
+            </div>
+
+            <!-- What happens -->
+            <div class="text-body2 q-mb-md" style="line-height: 1.5">
+              {% raw %}{{ ct.description }}{% endraw %}
+            </div>
+
+            <!-- ── Promotion: compose + preview + send ── -->
+            <template v-if="ct.value === 'promotion'">
+
+              <!-- Disabled state -->
+              <div
+                v-if="!getCommercialEnabled('promotion')"
+                class="q-pa-md q-mb-md text-center"
+                style="background: rgba(128,128,128,0.04); border-radius: 10px; border: 1px dashed rgba(128,128,128,0.2)"
+              >
+                <q-icon name="toggle_off" size="sm" color="grey-5" class="q-mb-xs"></q-icon>
+                <div class="text-body2 text-grey">
+                  Enable the toggle above to compose and send a broadcast.
+                </div>
+              </div>
+
+              <!-- Enabled: compose + preview + send -->
+              <div v-else>
+                <div class="row q-col-gutter-md q-mb-md">
+
+                  <!-- LEFT: Compose -->
+                  <div class="col-12 col-md-6">
+                    <div
+                      class="q-pa-md full-height"
+                      style="background: rgba(128,128,128,0.04); border-radius: 10px; border: 1px solid rgba(128,128,128,0.1)"
+                    >
+                      <div class="row items-center q-mb-sm">
+                        <q-icon name="edit" size="xs" color="grey-7" class="q-mr-xs"></q-icon>
+                        <div class="text-caption text-weight-bold text-grey-7" style="text-transform: uppercase; letter-spacing: 0.5px">
+                          Compose
+                        </div>
+                      </div>
+
+                      <q-input
+                        :model-value="getCommercialContent('promotion')"
+                        @update:model-value="updateCommercialContent('promotion', $event)"
+                        type="textarea"
+                        outlined
+                        dense
+                        autogrow
+                        :input-style="{minHeight: '90px'}"
+                        label="Message"
+                        placeholder="e.g. Hey! We just added new products — come take a look 🔥"
+                        class="q-mb-sm"
+                      >
+                        <template v-slot:hint>
+                          Leave empty for the default greeting. Supports emojis, links, &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;.
+                        </template>
+                      </q-input>
+
+                      <q-input
+                        :model-value="getCommercialImageUrl('promotion')"
+                        @update:model-value="updateCommercialImageUrl('promotion', $event)"
+                        outlined
+                        dense
+                        label="Image URL"
+                        placeholder="https://example.com/promo-banner.jpg"
+                      >
+                        <template v-slot:prepend>
+                          <q-icon name="image" size="xs"></q-icon>
+                        </template>
+                        <template v-slot:hint>
+                          Optional — sends as a photo message with your text as caption.
+                        </template>
+                      </q-input>
+                    </div>
+                  </div>
+
+                  <!-- RIGHT: Live preview -->
+                  <div class="col-12 col-md-6">
+                    <div
+                      class="q-pa-md full-height"
+                      style="background: rgba(128,128,128,0.04); border-radius: 10px; border: 1px solid rgba(128,128,128,0.1)"
+                    >
+                      <div class="row items-center q-mb-sm">
+                        <q-icon name="visibility" size="xs" color="grey-7" class="q-mr-xs"></q-icon>
+                        <div class="text-caption text-weight-bold text-grey-7" style="text-transform: uppercase; letter-spacing: 0.5px">
+                          {% raw %}{{ getCommercialContent('promotion') ? 'Live preview' : 'Default message' }}{% endraw %}
+                        </div>
+                      </div>
+
+                      <!-- Telegram-style bubble -->
+                      <div
+                        class="q-pa-sm"
+                        style="background: rgba(100,80,200,0.06); border-radius: 12px 12px 12px 2px; border: 1px solid rgba(100,80,200,0.12)"
+                      >
+                        <div
+                          v-if="getCommercialImageUrl('promotion')"
+                          class="q-mb-sm"
+                          style="border-radius: 8px; overflow: hidden"
+                        >
+                          <img
+                            :src="getCommercialImageUrl('promotion')"
+                            style="max-width: 100%; max-height: 180px; display: block; object-fit: cover; width: 100%"
+                            @error="$event.target.style.display='none'"
+                          >
+                        </div>
+                        <div
+                          class="text-body2"
+                          style="white-space: pre-line; line-height: 1.6"
+                          v-html="promotionPreview"
+                        ></div>
+                        <q-btn
+                          flat dense no-caps
+                          size="xs"
+                          color="primary"
+                          class="q-mt-xs"
+                          disable
+                        >
+                          <q-icon name="open_in_new" size="xs" left></q-icon>
+                          {% raw %}{{ ct.cta }}{% endraw %}
+                        </q-btn>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Send action -->
+                <q-btn
+                  unelevated
+                  color="primary"
+                  icon="send"
+                  no-caps
+                  size="sm"
+                  :label="'Send now to ' + customers.length + ' customers'"
+                  :disable="!customers.length"
+                  @click="broadcastType('promotion')"
+                ></q-btn>
+              </div>
+
+            </template>
+            <template v-else>
+
+              <!-- Delay setting for abandoned cart -->
+              <div
+                v-if="ct.value === 'abandoned_cart'"
+                class="row items-center q-mb-md"
+                style="max-width: 320px"
+              >
+                <div class="text-caption text-weight-medium q-mr-sm" style="white-space: nowrap">
+                  Send after
+                </div>
+                <q-input
+                  :model-value="getCommercialDelay(ct.value)"
+                  @update:model-value="updateCommercialDelay(ct.value, $event)"
+                  type="number"
+                  dense
+                  outlined
+                  class="custom_select"
+                  style="width: 80px"
+                  suffix="min"
+                ></q-input>
+              </div>
+
+              <div class="text-caption text-weight-medium q-mb-xs" style="opacity: 0.5">
+                Example message your customer will see:
+              </div>
+              <div
+                class="q-pa-sm"
+                style="background: rgba(128,128,128,0.05); border-radius: 8px; border: 1px solid rgba(128,128,128,0.1)"
+              >
+                <div
+                  class="text-body2"
+                  style="white-space: pre-line; line-height: 1.6"
+                  v-html="ct.example"
+                ></div>
+                <q-btn
+                  flat dense no-caps
+                  size="xs"
+                  color="primary"
+                  class="q-mt-xs"
+                  disable
+                >
+                  <q-icon name="open_in_new" size="xs" left></q-icon>
+                  {% raw %}{{ ct.cta }}{% endraw %}
+                </q-btn>
+              </div>
+
+            </template>
+          </q-card-section>
+        </q-card>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+</div>
+
+
+<!-- ====== RIGHT DRAWER: Extension Info Box ====== -->
+<q-drawer
+  side="right"
+  v-model="drawerRight"
+  class="custom_border"
+  overlay
+  :width="350"
+  :breakpoint="500"
+>
+  <div class="absolute" v-if="drawerRight" style="top: 15px; left: -17px; z-index: 100">
+    <q-btn
+      dense
+      round
+      unelevated
+      color="primary"
+      icon="chevron_right"
+      @click="drawerRight = false"
+    ></q-btn>
+  </div>
+
+  <q-scroll-area class="fit">
+    <q-card class="info-box" flat>
+
+      <!-- Hero Header with Image -->
+      <div class="info-hero">
+        <img
+          src="/telegramshop/static/image/telegram_shopping_infomodal.png"
+          alt="Telegram Shopping"
+        />
+        <div class="info-title">Telegram Shopping</div>
+        <div class="info-subtitle">
+          Sell products with Lightning payments, directly in Telegram.
+        </div>
+      </div>
+
+      <!-- Get Started -->
+      <div class="info-section-label">Get started</div>
+      <div class="q-px-md q-pb-sm">
+        <div class="info-step">
+          <div class="info-step-num bg-primary">1</div>
+          <div class="info-step-text">
+            Create a bot via
+            <a href="https://t.me/BotFather" target="_blank">@BotFather</a>
+            on Telegram
+          </div>
+        </div>
+        <div class="info-step">
+          <div class="info-step-num bg-primary">2</div>
+          <div class="info-step-text">
+            Click <b>New Shop</b> and paste your bot token
+          </div>
+        </div>
+        <div class="info-step">
+          <div class="info-step-num bg-primary">3</div>
+          <div class="info-step-text">
+            Pick your Inventory and currency
+          </div>
+        </div>
+        <div class="info-step">
+          <div class="info-step-num bg-positive">4</div>
+          <div class="info-step-text">
+            Start the bot &mdash; share the link!
+          </div>
+        </div>
+      </div>
+
+      <q-separator class="custom_seperator"></q-separator>
+
+      <!-- What's included -->
+      <div class="info-section-label">What's included</div>
+      <div class="q-px-md q-pb-sm" style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <span class="info-chip">
+          <q-icon name="inventory_2" size="14px" color="primary"></q-icon>
+          Inventory sync
+        </span>
+        <span class="info-chip">
+          <q-icon name="shopping_cart" size="14px" color="primary"></q-icon>
+          Cart & checkout
+        </span>
+        <span class="info-chip">
+          <q-icon name="bolt" size="14px" color="primary"></q-icon>
+          Lightning payments
+        </span>
+        <span class="info-chip">
+          <q-icon name="local_shipping" size="14px" color="primary"></q-icon>
+          Order tracking
+        </span>
+        <span class="info-chip">
+          <q-icon name="chat" size="14px" color="primary"></q-icon>
+          Messaging
+        </span>
+        <span class="info-chip">
+          <q-icon name="replay" size="14px" color="primary"></q-icon>
+          Returns & refunds
+        </span>
+        <span class="info-chip">
+          <q-icon name="share" size="14px" color="primary"></q-icon>
+          Inline sharing
+        </span>
+        <span class="info-chip">
+          <q-icon name="link" size="14px" color="primary"></q-icon>
+          Deep links
+        </span>
+        <span class="info-chip">
+          <q-icon name="collections" size="14px" color="primary"></q-icon>
+          Image galleries
+        </span>
+        <span class="info-chip">
+          <q-icon name="currency_exchange" size="14px" color="primary"></q-icon>
+          Multi-currency
+        </span>
+      </div>
+
+      <q-separator class="custom_seperator"></q-separator>
+
+      <!-- Tips & Tricks -->
+      <div class="info-section-label">Tips & tricks</div>
+      <div class="q-px-md q-pb-md">
+        <div class="info-tip">
+          <div class="info-tip-icon" style="background: rgba(var(--q-primary-rgb, 25,118,210), 0.1);">
+            <q-icon name="filter_alt" size="16px" color="primary"></q-icon>
+          </div>
+          <div class="info-tip-text">
+            Use <b>omit tags</b> in Inventory to hide
+            specific products from the shop.
+          </div>
+        </div>
+        <div class="info-tip">
+          <div class="info-tip-icon" style="background: rgba(var(--q-primary-rgb, 25,118,210), 0.1);">
+            <q-icon name="collections" size="16px" color="primary"></q-icon>
+          </div>
+          <div class="info-tip-text">
+            Add up to <b>5 images</b> per product
+            for swipeable galleries in Telegram.
+          </div>
+        </div>
+        <div class="info-tip">
+          <div class="info-tip-icon" style="background: rgba(var(--q-primary-rgb, 25,118,210), 0.1);">
+            <q-icon name="timer" size="16px" color="primary"></q-icon>
+          </div>
+          <div class="info-tip-text">
+            Invoices expire after <b>15 minutes</b>.
+            Customers get notified automatically.
+          </div>
+        </div>
+        <div class="info-tip">
+          <div class="info-tip-icon" style="background: rgba(var(--q-primary-rgb, 25,118,210), 0.1);">
+            <q-icon name="account_balance_wallet" size="16px" color="primary"></q-icon>
+          </div>
+          <div class="info-tip-text">
+            Store credits from returns are
+            <b>auto-applied</b> at next checkout.
+          </div>
+        </div>
+        <div class="info-tip">
+          <div class="info-tip-icon" style="background: rgba(var(--q-primary-rgb, 25,118,210), 0.1);">
+            <q-icon name="local_shipping" size="16px" color="primary"></q-icon>
+          </div>
+          <div class="info-tip-text">
+            Set <b>flat rate</b>, <b>per-kg</b>, or
+            <b>free shipping</b> thresholds in shop settings.
+          </div>
+        </div>
+      </div>
+
+      <q-separator class="custom_seperator"></q-separator>
+
+      <!-- Links -->
+      <div class="q-py-xs">
+        <a
+          href="/docs#/telegramshop"
+          target="_blank"
+          class="info-link-item"
+        >
+          <q-icon name="api" size="20px" color="primary"></q-icon>
+          <div style="flex: 1">
+            <div style="font-size: 0.85rem; font-weight: 500">
+              API Reference
+            </div>
+            <div style="font-size: 0.75rem; opacity: 0.5">
+              Swagger docs
+            </div>
+          </div>
+          <q-icon name="open_in_new" size="14px" color="grey"></q-icon>
+        </a>
+        <a
+          href="https://github.com/DoktorShift/telegram_shop_lnbits"
+          target="_blank"
+          class="info-link-item"
+        >
+          <q-icon name="code" size="20px" color="primary"></q-icon>
+          <div style="flex: 1">
+            <div style="font-size: 0.85rem; font-weight: 500">
+              Source & Issues
+            </div>
+            <div style="font-size: 0.75rem; opacity: 0.5">
+              GitHub
+            </div>
+          </div>
+          <q-icon name="open_in_new" size="14px" color="grey"></q-icon>
+        </a>
+      </div>
+
+      <!-- Footer -->
+      <div
+        class="q-pa-md text-center"
+        style="font-size: 0.75rem; opacity: 0.35;"
+      >
+        Built by
+        <a
+          href="https://github.com/DoktorShift"
+          target="_blank"
+          style="color: inherit;"
+        >DoktorShift</a>
+      </div>
+
+    </q-card>
+  </q-scroll-area>
+</q-drawer>
+
+<!-- ====== SHOP CREATE/EDIT DIALOG ====== -->
+<q-dialog v-model="shopDialog.show" position="top" @hide="onShopDialogHide">
+  <q-card class="q-pa-none lnbits__dialog-card dialog_style shop-dialog">
+
+    <!-- Header Bar -->
+    <q-bar class="bg-primary text-white" style="height: 52px">
+      <q-icon :name="shopDialog.isEdit ? 'edit' : 'storefront'" size="sm"></q-icon>
+      <div class="q-ml-sm text-subtitle1 text-weight-medium">
+        {% raw %}{{ shopDialog.isEdit ? 'Edit Shop' : 'New Shop' }}{% endraw %}
+      </div>
+      <q-space></q-space>
+      <q-btn flat dense round icon="close" color="white" v-close-popup></q-btn>
+    </q-bar>
+
+    <!-- Step Indicators -->
+    <div class="row no-wrap items-center q-px-lg q-pt-md q-pb-sm" style="gap: 8px">
+      <div
+        v-for="s in 3"
+        :key="s"
+        class="row items-center no-wrap cursor-pointer"
+        @click="shopDialog.step = s"
+        style="gap: 6px"
+      >
+        <q-avatar
+          :size="shopDialog.step === s ? '28px' : '24px'"
+          :color="shopDialog.step > s ? 'positive' : (shopDialog.step === s ? 'primary' : 'grey-4')"
+          :text-color="shopDialog.step >= s ? 'white' : 'grey-7'"
+          :font-size="shopDialog.step === s ? '13px' : '12px'"
+          style="transition: all 0.2s"
+        >
+          <q-icon v-if="shopDialog.step > s" name="check" size="14px"></q-icon>
+          <span v-else>{% raw %}{{ s }}{% endraw %}</span>
+        </q-avatar>
+        <span
+          class="text-caption"
+          :class="shopDialog.step === s ? 'text-weight-bold' : 'text-grey-6'"
+          style="white-space: nowrap"
+        >
+          {% raw %}{{ s === 1 ? 'Bot Setup' : (s === 2 ? 'Products' : 'Settings') }}{% endraw %}
+        </span>
+        <q-icon
+          v-if="s < 3"
+          name="chevron_right"
+          size="16px"
+          color="grey-4"
+        ></q-icon>
+      </div>
+    </div>
+
+    <q-separator class="custom_seperator"></q-separator>
+
+    <!-- ===== STEP 1: Bot Setup ===== -->
+    <div v-show="shopDialog.step === 1" class="q-pa-lg">
+      <div class="text-subtitle1 text-weight-medium q-mb-xs">
+        Name your shop &amp; connect a bot
+      </div>
+      <div class="text-caption text-grey q-mb-lg">
+        Give your shop a name and paste the bot token from @BotFather.
+      </div>
+
+      <q-input
+        v-model="shopDialog.data.title"
+        filled
+        label="Shop Name"
+        placeholder="e.g. My Lightning Store"
+        :rules="[v => !!v || 'Give your shop a name']"
+        class="q-mb-md"
+      >
+        <template v-slot:prepend>
+          <q-icon name="storefront" color="grey-7" size="sm"></q-icon>
+        </template>
+      </q-input>
+
+      <q-input
+        v-model="shopDialog.data.description"
+        filled
+        label="Description (optional)"
+        type="textarea"
+        rows="2"
+        autogrow
+        placeholder="A short welcome message customers see when they open your bot"
+        class="q-mb-lg"
+      ></q-input>
+
+      <q-separator class="q-mb-lg" style="opacity: 0.3"></q-separator>
+
+      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">
+        Telegram Bot Token
+      </div>
+      <div class="text-caption text-grey q-mb-sm">
+        Open Telegram, search for <b>@BotFather</b>, send <code>/newbot</code>,
+        and copy the token.
+      </div>
+      <div class="row q-col-gutter-sm items-start">
+        <div class="col">
+          <q-input
+            v-model="shopDialog.data.bot_token"
+            filled
+            label="Bot Token"
+            type="password"
+            placeholder="Paste token here"
+            :rules="[v => !!v || 'Bot token is required']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="vpn_key" color="grey-7" size="sm"></q-icon>
+            </template>
+          </q-input>
+        </div>
+        <div class="col-auto q-pt-xs">
+          <q-btn
+            unelevated color="primary"
+            label="Test" no-caps
+            class="avatar_style"
+            style="height: 54px"
+            @click="testBotToken"
+            :loading="shopDialog.testing"
+            :disable="!shopDialog.data.bot_token"
+          ></q-btn>
+        </div>
+      </div>
+      <q-banner
+        v-if="shopDialog.botUsername"
+        dense rounded
+        class="info-banner info-banner--success q-mt-sm"
+      >
+        <template v-slot:avatar>
+          <q-icon name="check_circle"></q-icon>
+        </template>
+        Bot connected: <b>@{% raw %}{{ shopDialog.botUsername }}{% endraw %}</b>
+      </q-banner>
+    </div>
+
+    <!-- ===== STEP 2: Products ===== -->
+    <div v-show="shopDialog.step === 2" class="q-pa-lg">
+      <div class="text-subtitle1 text-weight-medium q-mb-xs">
+        Choose your product inventory
+      </div>
+      <div class="text-caption text-grey q-mb-lg">
+        Products, prices, images, tax, and stock are all managed in the
+        <b>Inventory</b> extension. Pick which inventory to sell from.
+      </div>
+
+      <q-select
+        v-model="shopDialog.data.inventory_id"
+        :options="inventoryOptions"
+        emit-value map-options filled
+        label="Select Inventory"
+        :loading="inventoryLoading"
+        :rules="[v => !!v || 'Choose an inventory']"
+        class="q-mb-md"
+      >
+        <template v-slot:prepend>
+          <q-icon name="inventory_2" color="grey-7" size="sm"></q-icon>
+        </template>
+        <template v-slot:no-option>
+          <q-item>
+            <q-item-section>
+              <q-item-label class="text-grey">
+                No inventory found
+              </q-item-label>
+              <q-item-label caption>
+                Install the Inventory extension and add products first
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+
+      <q-banner
+        v-if="inventoryError && !inventoryLoading"
+        dense rounded
+        class="info-banner info-banner--warning q-mb-md"
+      >
+        <template v-slot:avatar>
+          <q-icon name="warning"></q-icon>
+        </template>
+        <div class="text-body2">
+          No inventory found. Make sure the
+          <b>Inventory extension</b> is installed and you have created
+          at least one inventory with products.
+        </div>
+      </q-banner>
+
+      <q-banner
+        v-if="activeOmitTags.length > 0"
+        dense rounded
+        class="info-banner info-banner--info q-mb-md"
+      >
+        <template v-slot:avatar>
+          <q-icon name="filter_alt"></q-icon>
+        </template>
+        <div class="text-body2">
+          <b>Filter active</b> &mdash; Products tagged
+          <q-badge
+            v-for="tag in activeOmitTags"
+            :key="tag"
+            color="blue-3"
+            text-color="blue-9"
+            class="q-mx-xs"
+            :label="tag"
+          ></q-badge>
+          are excluded (managed in Inventory settings).
+        </div>
+      </q-banner>
+
+      <q-separator class="q-mb-lg" style="opacity: 0.3"></q-separator>
+
+      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">
+        Pricing Currency
+      </div>
+      <div class="text-caption text-grey q-mb-sm">
+        Customers always pay in sats. If you choose a fiat currency,
+        prices convert automatically at checkout.
+      </div>
+      <q-select
+        v-model="shopDialog.data.currency"
+        :options="currencies"
+        emit-value map-options filled
+        label="Display Currency"
+        style="max-width: 280px"
+      >
+        <template v-slot:prepend>
+          <q-icon name="paid" color="grey-7" size="sm"></q-icon>
+        </template>
+      </q-select>
+    </div>
+
+    <!-- ===== STEP 3: Settings ===== -->
+    <div v-show="shopDialog.step === 3" class="q-pa-lg">
+      <div class="text-subtitle1 text-weight-medium q-mb-xs">
+        Checkout &amp; notifications
+      </div>
+      <div class="text-caption text-grey q-mb-lg">
+        Configure what happens when a customer checks out.
+      </div>
+
+      <!-- Checkout Mode -->
+      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">
+        Customer info at checkout
+      </div>
+      <div class="text-caption text-grey q-mb-sm">
+        What do you need from the buyer before they pay?
+      </div>
+      <q-btn-toggle
+        v-model="shopDialog.data.checkout_mode"
+        :options="[
+          {label: 'Nothing', value: 'none'},
+          {label: 'Email', value: 'email'},
+          {label: 'Full Address', value: 'address'}
+        ]"
+        unelevated toggle-color="primary"
+        no-caps
+        style="border-radius: 8px"
+        class="custom_border no-shadow q-mb-lg"
+      ></q-btn-toggle>
+
+      <q-separator class="q-mb-lg" style="opacity: 0.3"></q-separator>
+
+      <!-- Admin Notifications -->
+      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">
+        Order Notifications
+      </div>
+      <div class="text-caption text-grey q-mb-sm">
+        Get notified in Telegram when an order is placed.
+        Send <code>/start</code> to <b>@userinfobot</b> to find your chat ID.
+      </div>
+      <q-input
+        v-model="shopDialog.data.admin_chat_id"
+        filled
+        label="Admin Chat ID (optional)"
+        placeholder="e.g. 123456789"
+        class="q-mb-lg"
+      >
+        <template v-slot:prepend>
+          <q-icon name="notifications_active" color="grey-7" size="sm"></q-icon>
+        </template>
+      </q-input>
+
+      <q-separator class="q-mb-md" style="opacity: 0.3"></q-separator>
+
+      <!-- Advanced Toggle -->
+      <q-item
+        clickable
+        dense
+        class="q-px-none q-mb-sm"
+        @click="shopDialog.showAdvanced = !shopDialog.showAdvanced"
+      >
+        <q-item-section avatar style="min-width: 36px">
+          <q-icon
+            :name="shopDialog.showAdvanced ? 'expand_less' : 'expand_more'"
+            color="grey-6"
+          ></q-icon>
+        </q-item-section>
+        <q-item-section>
+          <q-item-label class="text-caption text-weight-medium text-uppercase" style="opacity: 0.5; letter-spacing: 0.5px">
+            Advanced Options
+          </q-item-label>
+        </q-item-section>
+      </q-item>
+
+      <div v-show="shopDialog.showAdvanced">
+        <!-- Shipping Costs -->
+        <div class="q-pa-md q-mb-sm" style="background: rgba(128,128,128,0.04); border-radius: 8px">
+          <div class="row items-center no-wrap q-mb-sm">
+            <q-icon name="local_shipping" color="grey-7" size="xs" class="q-mr-sm"></q-icon>
+            <span class="text-body2 text-weight-medium">Shipping Costs</span>
+            <q-icon name="help_outline" color="grey-5" size="14px" class="q-ml-xs cursor-pointer">
+              <q-tooltip max-width="300px" class="text-body2">
+                <b>How shipping is calculated:</b><br><br>
+                For orders with physical items, shipping =
+                <b>flat rate</b> + (<b>total weight</b> x per-kg rate).<br><br>
+                If the order subtotal exceeds the <b>free threshold</b>,
+                shipping is waived entirely.<br><br>
+                Set all to 0 for free shipping on everything.
+                Product weights come from the Inventory extension.
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <div class="text-caption text-grey q-mb-sm">
+            Prices in {% raw %}{{ shopDialog.data.currency ? shopDialog.data.currency.toUpperCase() : 'SAT' }}{% endraw %}.
+            Only applies to physical products.
+          </div>
+          <div class="row q-col-gutter-sm">
+            <div class="col-12 col-sm-4">
+              <q-input
+                v-model.number="shopDialog.data.shipping_flat_rate"
+                filled dense
+                label="Flat rate"
+                type="number"
+                min="0"
+                step="any"
+              ></q-input>
+            </div>
+            <div class="col-12 col-sm-4">
+              <q-input
+                v-model.number="shopDialog.data.shipping_per_kg"
+                filled dense
+                label="Per kg surcharge"
+                type="number"
+                min="0"
+                step="any"
+              ></q-input>
+            </div>
+            <div class="col-12 col-sm-4">
+              <q-input
+                v-model.number="shopDialog.data.shipping_free_threshold"
+                filled dense
+                label="Free above"
+                type="number"
+                min="0"
+                step="any"
+                hint="0 = never free"
+              ></q-input>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fulfillment -->
+        <div class="q-pa-md q-mb-sm" style="background: rgba(128,128,128,0.04); border-radius: 8px">
+          <div class="row items-center no-wrap q-mb-sm">
+            <q-icon name="checklist" color="grey-7" size="xs" class="q-mr-sm"></q-icon>
+            <span class="text-body2 text-weight-medium">Fulfillment Tracking</span>
+            <q-icon name="help_outline" color="grey-5" size="14px" class="q-ml-xs cursor-pointer">
+              <q-tooltip max-width="260px" class="text-body2">
+                Track physical orders through stages:
+                Preparing, Shipping, Delivered.
+                Customers get notified at each step.
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <q-toggle
+            v-model="shopDialog.data.enable_order_tracking"
+            label="Enable order tracking"
+            dense
+          ></q-toggle>
+        </div>
+
+        <!-- Returns -->
+        <div class="q-pa-md q-mb-sm" style="background: rgba(128,128,128,0.04); border-radius: 8px">
+          <div class="row items-center no-wrap q-mb-sm">
+            <q-icon name="replay" color="grey-7" size="xs" class="q-mr-sm"></q-icon>
+            <span class="text-body2 text-weight-medium">Returns &amp; Refunds</span>
+            <q-icon name="help_outline" color="grey-5" size="14px" class="q-ml-xs cursor-pointer">
+              <q-tooltip max-width="260px" class="text-body2">
+                Let customers request returns through the bot.
+                You review each request in the dashboard.
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <q-toggle
+            v-model="shopDialog.data.allow_returns"
+            label="Allow returns"
+            dense
+          ></q-toggle>
+
+          <div v-if="shopDialog.data.allow_returns" class="q-mt-sm q-ml-sm">
+            <div class="row items-center no-wrap q-mb-sm">
+              <q-toggle
+                v-model="shopDialog.data.allow_credit_refund"
+                label="Allow store credit refunds"
+                dense
+              ></q-toggle>
+              <q-icon name="help_outline" color="grey-5" size="16px" class="q-ml-xs cursor-pointer">
+                <q-tooltip max-width="300px" class="text-body2">
+                  <b>What is store credit?</b><br><br>
+                  When you approve a return, you can choose to refund
+                  the customer as <b>store credit</b> instead of sending
+                  sats back via Lightning.<br><br>
+                  The credit is saved to their account and
+                  <b>automatically applied</b> on their next purchase,
+                  reducing the invoice amount.<br><br>
+                  <b>Why use it?</b> You keep the sats in your wallet
+                  and the customer stays as a buyer. If disabled, you
+                  can only refund via Lightning (the customer must
+                  provide an invoice).
+                </q-tooltip>
+              </q-icon>
+            </div>
+            <q-input
+              v-model.number="shopDialog.data.return_window_hours"
+              filled dense
+              label="Return window (hours)"
+              type="number"
+              style="max-width: 200px"
+              :hint="`= ${Math.round(shopDialog.data.return_window_hours / 24)} days`"
+            ></q-input>
+          </div>
+        </div>
+
+        <!-- Connection Mode -->
+        <div class="q-pa-md" style="background: rgba(128,128,128,0.04); border-radius: 8px">
+          <div class="row items-center no-wrap q-mb-sm">
+            <q-icon name="settings_ethernet" color="grey-7" size="xs" class="q-mr-sm"></q-icon>
+            <span class="text-body2 text-weight-medium">Connection Mode</span>
+          </div>
+          <q-btn-toggle
+            v-model="shopDialog.data.use_webhook"
+            :options="[
+              {label: 'Long-Polling (default)', value: false},
+              {label: 'Webhook', value: true}
+            ]"
+            unelevated toggle-color="primary"
+            size="sm" no-caps
+            style="border-radius: 8px"
+            class="custom_border no-shadow"
+          ></q-btn-toggle>
+          <div class="text-caption text-grey q-mt-xs">
+            <span v-if="!shopDialog.data.use_webhook">
+              Works behind firewalls and NAT. Best for most setups.
+            </span>
+            <span v-else class="text-warning">
+              Requires a publicly accessible HTTPS URL.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <q-separator class="custom_seperator"></q-separator>
+
+    <!-- Navigation Footer -->
+    <q-card-actions class="q-pa-md" align="between">
+      <q-btn
+        v-if="shopDialog.step === 1"
+        flat color="grey" no-caps label="Cancel"
+        v-close-popup
+      ></q-btn>
+      <q-btn
+        v-else
+        flat color="grey" no-caps label="Back"
+        @click="shopDialog.step--"
+      ></q-btn>
+
+      <q-btn
+        v-if="shopDialog.step < 3"
+        unelevated color="primary" no-caps
+        class="avatar_style q-px-lg"
+        label="Continue"
+        @click="shopDialog.step++"
+        :disable="(shopDialog.step === 1 && (!shopDialog.data.title || !shopDialog.data.bot_token)) || (shopDialog.step === 2 && !shopDialog.data.inventory_id)"
+      ></q-btn>
+      <q-btn
+        v-else
+        unelevated color="primary" no-caps
+        class="avatar_style q-px-lg"
+        :label="shopDialog.isEdit ? 'Save Changes' : 'Create Shop'"
+        @click="saveShop"
+        :disable="!shopDialog.data.title || !shopDialog.data.bot_token || !shopDialog.data.inventory_id"
+      ></q-btn>
+    </q-card-actions>
+
+  </q-card>
+</q-dialog>
+
+<!-- ====== DELETE CONFIRMATION ====== -->
+<q-dialog v-model="deleteDialog.show">
+  <q-card style="width: 400px; max-width: 90vw" class="dialog_style">
+    <q-card-section class="row items-center q-pb-sm">
+      <q-avatar
+        color="negative"
+        text-color="white"
+        icon="delete"
+        size="md"
+        class="avatar_style q-mr-sm"
+     ></q-avatar>
+      <span class="text-h6">Delete Shop</span>
+    </q-card-section>
+    <q-card-section>
+      <div class="text-body2 q-mb-md">
+        Are you sure you want to delete
+        <b>{% raw %}{{ deleteDialog.data ? deleteDialog.data.title : '' }}{% endraw %}</b>?
+      </div>
+      <q-banner dense rounded class="info-banner info-banner--warning">
+        <template v-slot:avatar>
+          <q-icon name="warning"></q-icon>
+        </template>
+        This will stop the Telegram bot and remove all associated data.
+      </q-banner>
+    </q-card-section>
+    <q-card-actions align="right" class="q-pa-md q-pt-none">
+      <q-btn flat color="grey" label="Cancel" no-caps v-close-popup></q-btn>
+      <q-btn
+        unelevated color="negative" label="Delete" no-caps
+        class="avatar_style"
+        @click="confirmDelete"
+     ></q-btn>
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+
+<!-- ====== DENY RETURN DIALOG ====== -->
+<q-dialog v-model="denyDialog.show">
+  <q-card style="width: 400px; max-width: 90vw" class="dialog_style">
+    <q-card-section>
+      <div class="text-h6">Deny Return</div>
+      <div class="text-caption text-grey" v-if="denyDialog.data">
+        Order #{% raw %}{{ denyDialog.data.order_id.substring(0, 8) }}{% endraw %}
+      </div>
+    </q-card-section>
+    <q-card-section class="q-pt-none">
+      <q-input
+        v-model="denyDialog.adminNote"
+        filled
+        label="Reason for denial *"
+        type="textarea"
+        rows="3"
+     ></q-input>
+    </q-card-section>
+    <q-card-actions align="right" class="q-pa-md q-pt-none">
+      <q-btn flat color="grey" label="Cancel" no-caps v-close-popup></q-btn>
+      <q-btn
+        unelevated color="negative" label="Deny Return" no-caps
+        class="avatar_style"
+        @click="confirmDeny"
+        :disable="!denyDialog.adminNote"
+     ></q-btn>
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+
+<!-- ====== APPROVE RETURN DIALOG ====== -->
+<q-dialog v-model="approveDialog.show">
+  <q-card style="width: 440px; max-width: 90vw" class="dialog_style">
+    <q-card-section>
+      <div class="text-h6">Approve Return</div>
+      <div class="text-caption text-grey" v-if="approveDialog.data">
+        Order #{% raw %}{{ approveDialog.data.order_id.substring(0, 8) }}{% endraw %}
+      </div>
+    </q-card-section>
+    <q-card-section class="q-pt-none">
+      <!-- Refund Amount -->
+      <div class="text-caption text-weight-medium q-mb-xs">Refund Amount (sats)</div>
+      <div class="text-caption text-grey q-mb-sm">
+        Original: {% raw %}{{ approveDialog.data ? formatSat(approveDialog.data.refund_amount_sats) : 0 }}{% endraw %} sats.
+        Reduce to deduct restocking fees, return shipping, etc.
+      </div>
+      <q-input
+        v-model.number="approveDialog.refundAmount"
+        filled dense
+        type="number"
+        :rules="[
+          v => v > 0 || 'Must be positive',
+          v => !approveDialog.data || v <= approveDialog.data.refund_amount_sats || 'Cannot exceed original amount'
+        ]"
+      >
+        <template v-slot:append>
+          <span class="text-caption text-grey">sats</span>
+        </template>
+      </q-input>
+      <div
+        v-if="approveDialog.data && approveDialog.refundAmount < approveDialog.data.refund_amount_sats"
+        class="text-caption text-warning q-mt-xs"
+      >
+        Deduction: {% raw %}{{ formatSat(approveDialog.data.refund_amount_sats - approveDialog.refundAmount) }}{% endraw %} sats
+      </div>
+
+      <q-separator class="q-my-md" style="opacity: 0.3"></q-separator>
+
+      <!-- Refund Method -->
+      <div class="text-caption text-weight-medium q-mb-sm">Refund Method</div>
+      <q-btn-toggle
+        v-model="approveDialog.method"
+        :options="[
+          {label: 'Lightning', value: 'lightning'},
+          {label: 'Store Credit', value: 'credit'}
+        ]"
+        unelevated toggle-color="primary"
+        no-caps
+        style="border-radius: 8px"
+        class="custom_border no-shadow"
+      ></q-btn-toggle>
+      <div class="text-caption text-grey q-mt-xs">
+        <span v-if="approveDialog.method === 'lightning'">
+          Customer sends a Lightning invoice or address to receive the refund.
+        </span>
+        <span v-else>
+          Credit is added to the customer's account and auto-applied on next purchase.
+        </span>
+      </div>
+    </q-card-section>
+    <q-card-actions align="right" class="q-pa-md q-pt-none">
+      <q-btn flat color="grey" label="Cancel" no-caps v-close-popup></q-btn>
+      <q-btn
+        unelevated color="positive" label="Approve Refund" no-caps
+        class="avatar_style"
+        @click="confirmApprove"
+        :disable="!approveDialog.refundAmount || approveDialog.refundAmount <= 0"
+      ></q-btn>
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+
+<!-- ====== FULFILLMENT NOTE DIALOG ====== -->
+<q-dialog v-model="fulfillmentDialog.show">
+  <q-card style="width: 400px; max-width: 90vw" class="dialog_style">
+    <q-card-section>
+      <div class="text-h6">
+        {% raw %}{{ fulfillmentDialog.statusLabel }}{% endraw %}
+      </div>
+      <div class="text-caption text-grey">Update fulfillment status</div>
+    </q-card-section>
+    <q-card-section class="q-pt-none">
+      <q-input
+        v-model="fulfillmentDialog.note"
+        filled
+        label="Note (optional, e.g. tracking number)"
+        type="textarea"
+        rows="2"
+     ></q-input>
+    </q-card-section>
+    <q-card-actions align="right" class="q-pa-md q-pt-none">
+      <q-btn flat color="grey" label="Cancel" no-caps v-close-popup></q-btn>
+      <q-btn
+        unelevated color="primary" label="Update" no-caps
+        class="avatar_style"
+        @click="confirmFulfillment"
+     ></q-btn>
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+
+<!-- ====== MESSAGE THREAD DIALOG ====== -->
+<q-dialog v-model="threadDialog.show" position="right" full-height>
+  <q-card style="width: 420px; max-width: 95vw" class="column">
+    <q-card-section class="row items-center q-pb-none">
+      <div>
+        <div class="text-subtitle1 text-weight-medium">
+          {% raw %}{{ threadDialog.username || 'Customer' }}{% endraw %}
+        </div>
+        <div class="text-caption text-grey" v-if="threadDialog.orderId">
+          Order #{% raw %}{{ threadDialog.orderId.substring(0, 8) }}{% endraw %}
+        </div>
+      </div>
+      <q-space></q-space>
+      <q-btn flat round dense icon="close" v-close-popup></q-btn>
+    </q-card-section>
+
+    <div class="custom_seperator q-mt-sm"></div>
+
+    <q-card-section class="msg-thread col">
+      <div
+        v-for="msg in threadDialog.messages"
+        :key="msg.id"
+        :class="['msg-bubble', msg.direction === 'in' ? 'msg-in' : 'msg-out']"
+      >
+        <div>{% raw %}{{ msg.content }}{% endraw %}</div>
+        <div
+          class="text-caption q-mt-xs"
+          :style="msg.direction === 'out' ? 'opacity: 0.7' : 'opacity: 0.5'"
+        >
+          {% raw %}{{ formatDateFrom(msg.timestamp) }}{% endraw %}
+        </div>
+      </div>
+      <div
+        v-if="threadDialog.messages.length === 0"
+        class="text-center text-grey q-pa-xl"
+      >
+        No messages in this thread yet.
+      </div>
+    </q-card-section>
+
+    <div class="custom_seperator"></div>
+
+    <q-card-section class="row q-gutter-sm q-py-md">
+      <q-input
+        v-model="replyText"
+        filled dense
+        placeholder="Type a reply..."
+        class="col"
+        @keyup.enter="sendReply"
+     ></q-input>
+      <q-btn
+        unelevated color="primary" icon="send"
+        class="avatar_style"
+        @click="sendReply"
+        :disable="!replyText.trim()"
+     ></q-btn>
+    </q-card-section>
+  </q-card>
+</q-dialog>
+
+<!-- ====== BROADCAST CONFIRM DIALOG ====== -->
+<q-dialog v-model="broadcastDialog.show">
+  <q-card style="width: 420px; max-width: 90vw" class="dialog_style">
+    <q-card-section class="row items-center q-pb-sm">
+      <q-avatar
+        color="primary"
+        text-color="white"
+        icon="campaign"
+        size="md"
+        class="avatar_style q-mr-sm"
+      ></q-avatar>
+      <span class="text-h6">Send Broadcast</span>
+    </q-card-section>
+    <q-card-section>
+      <div class="text-body2 q-mb-md">
+        This will send your promotion to
+        <b>{% raw %}{{ customers.length }}{% endraw %}
+        {% raw %}{{ customers.length === 1 ? 'customer' : 'customers' }}{% endraw %}</b>
+        via Telegram. This action cannot be undone.
+      </div>
+
+      <!-- Mini preview -->
+      <div
+        class="q-pa-sm"
+        style="background: rgba(100,80,200,0.06); border-radius: 10px 10px 10px 2px; border: 1px solid rgba(100,80,200,0.12)"
+      >
+        <div
+          v-if="getCommercialImageUrl('promotion')"
+          class="q-mb-xs"
+          style="border-radius: 6px; overflow: hidden"
+        >
+          <img
+            :src="getCommercialImageUrl('promotion')"
+            style="max-width: 100%; max-height: 120px; display: block; object-fit: cover; width: 100%"
+            @error="$event.target.style.display='none'"
+          >
+        </div>
+        <div
+          class="text-body2"
+          style="white-space: pre-line; line-height: 1.5; max-height: 100px; overflow: hidden"
+          v-html="promotionPreview"
+        ></div>
+      </div>
+    </q-card-section>
+    <q-card-actions align="right" class="q-pa-md q-pt-none">
+      <q-btn
+        flat color="grey" label="Cancel" no-caps
+        v-close-popup
+        :disable="broadcastDialog.sending"
+      ></q-btn>
+      <q-btn
+        unelevated color="primary" no-caps
+        icon="send"
+        class="avatar_style"
+        :label="broadcastDialog.sending ? 'Sending...' : 'Send now'"
+        :loading="broadcastDialog.sending"
+        @click="confirmBroadcast"
+      ></q-btn>
+    </q-card-actions>
+  </q-card>
+</q-dialog>
+
+{% endblock %}

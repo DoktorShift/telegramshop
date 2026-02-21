@@ -1,0 +1,23 @@
+{
+  "id": "telegramshop",
+  "version": "0.1.0",
+  "name": "Telegram Shopping",
+  "short_description": "Sell products via Telegram bot with Lightning payments",
+  "tile": "/telegramshop/static/image/telegramshop.png",
+  "min_lnbits_version": "1.4.0",
+  "donate": "doktorshift@blink.sv",
+  "contributors": [
+    {
+      "name": "DrShift",
+      "uri": "https://github.com/DoktorShift",
+      "role": "Developer"
+    }
+  ],
+  "images": [],
+  "description_md": "https://raw.githubusercontent.com/DoktorShift/telegram_shop_lnbits/main/description.md",
+  "terms_and_conditions_md": "https://raw.githubusercontent.com/DoktorShift/telegram_shop_lnbits/main/toc.md",
+  "license": "MIT",
+  "paid_features": "",
+  "tags": ["Telegram", "Shopping", "E-Commerce", "Lightning", "Inventory"],
+  "hidden": false
+}

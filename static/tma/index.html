@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Shop</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===== HOME SCREEN ===== -->
+    <div id="screen-home" class="screen active">
+      <div class="welcome-banner" id="welcome-banner" style="display:none">
+        <h2 id="shop-title"></h2>
+        <p id="welcome-text"></p>
+      </div>
+      <div class="search-wrap">
+        <input type="text" class="search-bar" id="search-bar"
+          placeholder="Search products..." oninput="TMA.handleSearch(this.value)">
+      </div>
+      <div class="category-chips" id="category-chips"></div>
+      <div class="product-grid" id="product-grid"></div>
+      <div class="loading-spinner" id="products-loading">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- ===== PRODUCT DETAIL ===== -->
+    <div id="screen-product" class="screen">
+      <div class="product-detail" id="product-detail"></div>
+    </div>
+
+    <!-- ===== CART SCREEN ===== -->
+    <div id="screen-cart" class="screen">
+      <h2 class="section-title">Cart</h2>
+      <div id="cart-content"></div>
+    </div>
+
+    <!-- ===== CHECKOUT SCREEN ===== -->
+    <div id="screen-checkout" class="screen">
+      <h2 class="section-title">Checkout</h2>
+      <div id="checkout-content"></div>
+    </div>
+
+    <!-- ===== PAYMENT SCREEN ===== -->
+    <div id="screen-payment" class="screen">
+      <div id="payment-content"></div>
+    </div>
+
+    <!-- ===== ORDERS SCREEN ===== -->
+    <div id="screen-orders" class="screen">
+      <h2 class="section-title">My Orders</h2>
+      <div id="orders-content">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== ORDER DETAIL ===== -->
+    <div id="screen-order-detail" class="screen">
+      <div id="order-detail-content"></div>
+    </div>
+
+    <!-- ===== RETURN FORM ===== -->
+    <div id="screen-return" class="screen">
+      <h2 class="section-title">Return Request</h2>
+      <div id="return-content"></div>
+    </div>
+
+    <!-- ===== RETURNS LIST ===== -->
+    <div id="screen-returns" class="screen">
+      <h2 class="section-title">My Returns</h2>
+      <div id="returns-content"></div>
+    </div>
+
+    <!-- ===== CREDITS SCREEN ===== -->
+    <div id="screen-credits" class="screen">
+      <h2 class="section-title">Store Credit</h2>
+      <div id="credits-content"></div>
+    </div>
+
+    <!-- ===== MESSAGES SCREEN ===== -->
+    <div id="screen-messages" class="screen">
+      <h2 class="section-title">Messages</h2>
+      <div id="messages-content"></div>
+    </div>
+
+    <!-- ===== TAB BAR ===== -->
+    <nav class="tab-bar" id="tab-bar">
+      <div class="tab active" data-tab="home" onclick="TMA.navigate('#/')">
+        <span class="tab-icon">&#x1f6cd;</span>
+        <span>Shop</span>
+      </div>
+      <div class="tab" data-tab="cart" onclick="TMA.navigate('#/cart')">
+        <span class="tab-icon">&#x1f6d2;</span>
+        <span>Cart</span>
+        <span class="tab-badge" id="cart-badge" style="display:none">0</span>
+      </div>
+      <div class="tab" data-tab="orders" onclick="TMA.navigate('#/orders')">
+        <span class="tab-icon">&#x1f4e6;</span>
+        <span>Orders</span>
+      </div>
+      <div class="tab" data-tab="messages" onclick="TMA.navigate('#/messages')">
+        <span class="tab-icon">&#x1f4ac;</span>
+        <span>Messages</span>
+      </div>
+    </nav>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
