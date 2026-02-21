@@ -17,17 +17,17 @@
 
 ## How it works
 
-```
-Shop created → 4 default campaigns added (all disabled)
-                        ↓
-          Enable + customize the ones you want
-                        ↓
-     Background engine runs every 5 minutes
-                        ↓
-  Selects targets → checks send log → sends → logs
-```
+> [!NOTE]
+> Each customer only receives a campaign **once** per qualifying event. The engine deduplicates automatically.
 
-Each customer only receives a campaign **once** per qualifying event. The engine deduplicates automatically.
+| Step | What happens |
+|:----:|-------------|
+| **1** | Shop is created — 4 default campaigns are added, all **disabled** |
+| **2** | You enable and customize the campaigns you want |
+| **3** | A background engine wakes up every **5 minutes** |
+| **4** | It finds customers who match the campaign criteria |
+| **5** | It checks the send log — skips anyone who already got this campaign |
+| **6** | It delivers the message via Telegram and logs the send |
 
 ---
 
