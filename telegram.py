@@ -18,6 +18,14 @@ from .product_sources import (
 SEP = "━━━━━━━━━━━━━━━━━━"
 
 
+def _safe_err(e: Exception, bot_token: str) -> str:
+    """Sanitise exception text so the bot token is never logged."""
+    msg = str(e)
+    if bot_token:
+        msg = msg.replace(bot_token, "bot<REDACTED>")
+    return msg
+
+
 class TelegramBot:
     def __init__(self, shop: Shop, wallet_key: str, user_id: str):
         self.shop = shop
@@ -74,7 +82,10 @@ class TelegramBot:
                 return {}
             return data.get("result", {})
         except Exception as e:
-            logger.error(f"Telegram API call failed ({method}): {e}")
+            logger.error(
+                f"Telegram API call failed ({method}): "
+                f"{_safe_err(e, self.shop.bot_token)}"
+            )
             return {}
 
     async def send_message(
@@ -153,7 +164,9 @@ class TelegramBot:
                 f"Loaded {len(active)} products for shop '{self.shop.title}'"
             )
         except Exception as e:
-            logger.error(f"Failed to load products: {e}")
+            logger.error(
+                f"Failed to load products: {_safe_err(e, self.shop.bot_token)}"
+            )
 
     async def register_webhook(self) -> None:
         webhook_url = (
@@ -203,7 +216,9 @@ class TelegramBot:
             elif "inline_query" in update:
                 await self.handle_inline_query(update["inline_query"])
         except Exception as e:
-            logger.error(f"Error handling update: {e}")
+            logger.error(
+                f"Error handling update: {_safe_err(e, self.shop.bot_token)}"
+            )
 
     # --- Command handler ---
 

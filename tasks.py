@@ -23,7 +23,7 @@ from .crud import (
 )
 from .models import Commercial, Customer, Shop
 from .product_sources import deduct_inventory_stock
-from .telegram import TelegramBot
+from .telegram import TelegramBot, _safe_err
 
 
 class BotManager:
@@ -51,7 +51,10 @@ class BotManager:
                 task = asyncio.create_task(self._poll_loop(bot))
                 self._poll_tasks[shop.id] = task
         except Exception as e:
-            logger.error(f"Failed to start bot for shop '{shop.title}': {e}")
+            logger.error(
+                f"Failed to start bot for shop '{shop.title}': "
+                f"{_safe_err(e, shop.bot_token)}"
+            )
             try:
                 await bot.stop()
             except Exception:
@@ -64,10 +67,13 @@ class BotManager:
             del self._poll_tasks[shop_id]
 
         if shop_id in self.bots:
+            bot = self.bots[shop_id]
             try:
-                await self.bots[shop_id].stop()
+                await bot.stop()
             except Exception as e:
-                logger.warning(f"Error stopping bot: {e}")
+                logger.warning(
+                    f"Error stopping bot: {_safe_err(e, bot.shop.bot_token)}"
+                )
             del self.bots[shop_id]
 
     def get_bot(self, shop_id: str) -> Optional[TelegramBot]:
@@ -84,7 +90,10 @@ class BotManager:
             try:
                 await self.start_bot(shop)
             except Exception as e:
-                logger.error(f"Failed to start bot for shop '{shop.title}': {e}")
+                logger.error(
+                    f"Failed to start bot for shop '{shop.title}': "
+                    f"{_safe_err(e, shop.bot_token)}"
+                )
 
     async def _poll_loop(self, bot: TelegramBot) -> None:
         while bot._running:
@@ -99,7 +108,10 @@ class BotManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Polling error for '{bot.shop.title}': {e}")
+                logger.error(
+                    f"Polling error for '{bot.shop.title}': "
+                    f"{_safe_err(e, bot.shop.bot_token)}"
+                )
                 await asyncio.sleep(5)
 
 

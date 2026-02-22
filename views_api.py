@@ -630,7 +630,11 @@ async def api_webhook(shop_id: str, request: Request) -> dict:
     try:
         await bot.handle_update(update)
     except Exception as e:
-        logger.error(f"Webhook error for shop {shop_id}: {e}")
+        from .telegram import _safe_err
+        logger.error(
+            f"Webhook error for shop {shop_id}: "
+            f"{_safe_err(e, bot.shop.bot_token)}"
+        )
     return {"ok": True}
 
 
