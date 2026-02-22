@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Shopping — Complete Experience</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --tg-blue: #2AABEE;
+  --tg-dark: #17212B;
+  --tg-darker: #0E1621;
+  --tg-msg-out: #2B5278;
+  --tg-msg-in: #182533;
+  --tg-btn: rgba(42,171,238,0.12);
+  --tg-btn-text: #6AB2F2;
+  --tg-hint: #708499;
+  --tg-separator: rgba(255,255,255,0.06);
+  --surface: #0a0e14;
+  --surface-2: #111820;
+  --surface-3: #1a2332;
+  --text: #e8edf2;
+  --text-dim: #708499;
+  --accent: #2AABEE;
+  --accent-glow: rgba(42,171,238,0.15);
+  --lightning: #f7931a;
+  --green: #4fae4e;
+  --red: #e53935;
+  --phone-w: 375px;
+  --phone-h: 720px;
+  --phone-radius: 44px;
+  --phone-bezel: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--surface);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ===== NOISE TEXTURE ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ===== NAVIGATION ===== */
+.topnav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 0 32px;
+  height: 56px;
+  background: rgba(10,14,20,0.85);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--tg-separator);
+}
+.topnav a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+.topnav a:hover, .topnav a.active { color: var(--accent); }
+.topnav .logo {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.topnav-back {
+  position: absolute;
+  left: 24px;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  opacity: 0.7;
+}
+.topnav-back:hover { opacity: 1; }
+
+/* ===== HERO ===== */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 24px 80px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(42,171,238,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: var(--accent-glow);
+  border: 1px solid rgba(42,171,238,0.2);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 32px;
+  animation: fadeUp 0.8s ease both;
+}
+.hero h1 {
+  font-size: clamp(40px, 7vw, 80px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 20px;
+  animation: fadeUp 0.8s ease 0.1s both;
+}
+.hero h1 .accent { color: var(--accent); }
+.hero .subtitle {
+  font-size: clamp(16px, 2.5vw, 22px);
+  color: var(--text-dim);
+  max-width: 560px;
+  animation: fadeUp 0.8s ease 0.2s both;
+  font-weight: 400;
+}
+.hero .scroll-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  animation: fadeUp 0.8s ease 0.4s both;
+}
+.scroll-hint .arrow {
+  width: 20px;
+  height: 20px;
+  border-right: 2px solid var(--text-dim);
+  border-bottom: 2px solid var(--text-dim);
+  transform: rotate(45deg);
+  animation: bounce 2s ease infinite;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes bounce {
+  0%, 100% { transform: rotate(45deg) translateY(0); }
+  50% { transform: rotate(45deg) translateY(6px); }
+}
+
+/* ===== SECTIONS ===== */
+.section {
+  padding: 100px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.section-header {
+  text-align: center;
+  margin-bottom: 72px;
+}
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.section-label::before, .section-label::after {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.4;
+}
+.section-title {
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+.section-desc {
+  color: var(--text-dim);
+  font-size: 16px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* ===== PHONE GRID ===== */
+.phone-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 48px 40px;
+}
+.phone-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.phone-slot .screen-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.phone-slot .screen-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+.phone-slot .screen-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  max-width: 300px;
+  text-align: center;
+}
+
+/* ===== PHONE FRAME ===== */
+.phone-frame {
+  width: var(--phone-w);
+  height: var(--phone-h);
+  background: #000;
+  border-radius: var(--phone-radius);
+  padding: var(--phone-bezel);
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 20px 60px rgba(0,0,0,0.5),
+    0 0 100px rgba(42,171,238,0.05);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 28px;
+  background: #000;
+  border-radius: 0 0 18px 18px;
+  z-index: 10;
+}
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 32px;
+  overflow: hidden;
+  position: relative;
+  background: var(--tg-darker);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Phone status bar */
+.phone-statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+  z-index: 5;
+}
+.phone-statusbar .status-icons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.phone-statusbar .battery {
+  width: 22px;
+  height: 10px;
+  border: 1.5px solid #fff;
+  border-radius: 2px;
+  position: relative;
+  opacity: 0.8;
+}
+.phone-statusbar .battery::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 2px;
+  width: 2px;
+  height: 4px;
+  background: #fff;
+  border-radius: 0 1px 1px 0;
+  opacity: 0.8;
+}
+.phone-statusbar .battery-fill {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 70%;
+  background: #fff;
+  border-radius: 1px;
+}
+.phone-statusbar .signal {
+  display: flex;
+  gap: 1px;
+  align-items: flex-end;
+  height: 10px;
+}
+.phone-statusbar .signal span {
+  width: 3px;
+  background: #fff;
+  border-radius: 1px;
+  opacity: 0.8;
+}
+
+/* Phone content area */
+.phone-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 70px;
+  scrollbar-width: none;
+}
+.phone-content::-webkit-scrollbar { display: none; }
+
+/* Tab bar */
+.tma-tabbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--tg-darker);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 0 10px;
+  z-index: 20;
+  border-radius: 0 0 32px 32px;
+}
+.tma-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--tg-hint);
+  position: relative;
+}
+.tma-tab.active { color: var(--tg-blue); }
+.tma-tab .tab-icon { font-size: 20px; }
+.tma-tab .tab-badge {
+  position: absolute;
+  top: -2px;
+  right: 50%;
+  margin-right: -16px;
+  background: var(--red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  line-height: 14px;
+  text-align: center;
+  border-radius: 7px;
+  padding: 0 3px;
+}
+
+/* ===== TMA COMPONENTS ===== */
+.tma-welcome {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.tma-welcome h3 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.tma-welcome p { font-size: 12px; color: var(--tg-hint); }
+
+.tma-search {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  background: var(--tg-dark);
+  color: var(--tg-hint);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.tma-chips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.tma-chip {
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--tg-dark);
+  color: #fff;
+  white-space: nowrap;
+}
+.tma-chip.active { background: var(--tg-blue); }
+
+.tma-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tma-pcard {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tma-pcard-img {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  position: relative;
+}
+.tma-pcard-img.img1 { background: linear-gradient(135deg, #1a3a5c, #0d2137); }
+.tma-pcard-img.img2 { background: linear-gradient(135deg, #2d1a3a, #1a0d2d); }
+.tma-pcard-img.img3 { background: linear-gradient(135deg, #1a3a2a, #0d2118); }
+.tma-pcard-img.img4 { background: linear-gradient(135deg, #3a2a1a, #2d1a0d); }
+.tma-pcard-img.img5 { background: linear-gradient(135deg, #2a2a3a, #1a1a2d); opacity: 0.5; }
+.tma-pcard-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--red);
+  color: #fff;
+}
+.tma-pcard-badge.sold-out { background: rgba(0,0,0,0.6); }
+.tma-pcard-info { padding: 8px; }
+.tma-pcard-title { font-size: 12px; font-weight: 600; color: #fff; line-height: 1.3; }
+.tma-pcard-price { font-size: 13px; font-weight: 700; color: var(--tg-blue); margin-top: 3px; }
+.tma-pcard-price .original { text-decoration: line-through; color: var(--tg-hint); font-weight: 400; font-size: 11px; margin-right: 4px; }
+.tma-pcard-stock { font-size: 10px; color: var(--red); font-weight: 600; margin-top: 2px; }
+.tma-pcard-cart-ind { font-size: 10px; color: var(--tg-blue); font-weight: 600; margin-top: 2px; background: rgba(42,171,238,0.1); padding: 1px 5px; border-radius: 3px; display: inline-block; }
+
+/* Product Detail */
+.tma-detail-gallery {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  background: linear-gradient(135deg, #1a3a5c, #0d2137);
+  position: relative;
+}
+.tma-detail-gallery .dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+}
+.tma-detail-gallery .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+}
+.tma-detail-gallery .dot.active { background: #fff; width: 16px; border-radius: 3px; }
+.tma-detail-gallery .counter {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.tma-back { color: var(--tg-blue); font-size: 13px; margin-bottom: 10px; display: block; }
+.tma-dtitle { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.tma-dcategory { font-size: 12px; color: var(--tg-hint); margin-bottom: 8px; }
+.tma-dprice { font-size: 20px; font-weight: 700; color: var(--tg-blue); margin-bottom: 10px; }
+.tma-ddesc { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; margin-bottom: 12px; }
+.tma-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.tma-meta-tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--tg-dark); color: rgba(255,255,255,0.7); }
+.tma-meta-tag.low { color: var(--red); font-weight: 600; }
+
+.tma-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: default;
+}
+.tma-btn-primary { background: var(--tg-blue); color: #fff; }
+.tma-btn-secondary { background: var(--tg-dark); color: #fff; }
+.tma-btn-text { background: none; color: var(--tg-blue); font-size: 13px; padding: 8px; }
+.tma-btn-pay { background: linear-gradient(135deg, #f7931a, #ff6a00); color: #fff; font-size: 16px; font-weight: 700; padding: 14px; }
+
+/* Cart */
+.tma-credit-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(42,171,238,0.06);
+  border: 1px solid rgba(42,171,238,0.12);
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.tma-credit-banner strong { color: var(--tg-blue); }
+
+.tma-cart-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.tma-cart-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.tma-cart-info { flex: 1; min-width: 0; }
+.tma-cart-title { font-size: 13px; font-weight: 600; color: #fff; }
+.tma-cart-price-each { font-size: 11px; color: var(--tg-hint); }
+.tma-cart-right { text-align: right; flex-shrink: 0; }
+.tma-cart-line-total { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.tma-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tma-qty-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--tg-dark);
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+}
+.tma-qty-val { font-size: 13px; font-weight: 600; color: #fff; min-width: 16px; text-align: center; }
+
+.tma-summary {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+}
+.tma-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 3px 0;
+  color: rgba(255,255,255,0.8);
+}
+.tma-summary-row.credit { color: var(--tg-blue); }
+.tma-summary-row.total {
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  padding-top: 8px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Checkout */
+.tma-checkout-summary {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.tma-checkout-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+  color: var(--tg-hint);
+}
+.tma-checkout-item.total {
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.tma-checkout-item.credit { color: var(--tg-blue); }
+.tma-form-group { margin-bottom: 12px; }
+.tma-form-label { display: block; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 3px; }
+.tma-form-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  background: var(--tg-dark);
+  color: var(--tg-hint);
+  font-size: 14px;
+}
+.tma-form-row { display: flex; gap: 8px; }
+.tma-form-row > * { flex: 1; }
+
+/* Payment */
+.tma-payment { text-align: center; padding-top: 10px; }
+.tma-payment-icon { font-size: 44px; margin-bottom: 10px; }
+.tma-payment-amount { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.tma-payment-hint { font-size: 13px; color: var(--tg-hint); margin-bottom: 12px; }
+.tma-payment-credit {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--tg-blue);
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(42,171,238,0.08);
+  margin-bottom: 14px;
+}
+.tma-qr {
+  width: 180px;
+  height: 180px;
+  background: #fff;
+  border-radius: 12px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.tma-qr-inner {
+  width: 140px;
+  height: 140px;
+  display: grid;
+  grid-template-columns: repeat(11,1fr);
+  gap: 1px;
+}
+.tma-qr-inner span {
+  background: #000;
+  border-radius: 1px;
+}
+.tma-qr-inner span.w { background: #fff; }
+
+.tma-bolt11 {
+  background: var(--tg-dark);
+  border-radius: 10px;
+  padding: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--tg-hint);
+  text-align: left;
+  word-break: break-all;
+  max-height: 60px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  position: relative;
+}
+.tma-bolt11::after {
+  content: 'Tap to copy';
+  position: absolute;
+  bottom: 3px;
+  right: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  color: var(--tg-hint);
+}
+
+.tma-payment-status {
+  font-size: 12px;
+  color: var(--tg-hint);
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.tma-spinner-sm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--tg-dark);
+  border-top-color: var(--tg-blue);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Orders */
+.tma-order-card {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.tma-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  padding-right: 16px;
+}
+.tma-order-id { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: #fff; }
+.tma-order-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+.tma-order-status.paid { background: var(--tg-blue); color: #fff; }
+.tma-order-status.pending { background: rgba(128,128,128,0.15); color: var(--tg-hint); }
+.tma-order-status.expired { background: rgba(229,57,53,0.12); color: var(--red); }
+.tma-order-items { font-size: 12px; color: var(--tg-hint); margin-bottom: 5px; padding-right: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tma-order-footer { display: flex; justify-content: space-between; align-items: center; padding-right: 16px; }
+.tma-order-amount { font-size: 14px; font-weight: 700; color: #fff; }
+.tma-order-date { font-size: 10px; color: var(--tg-hint); }
+.tma-order-fulfillment { font-size: 11px; margin-top: 5px; padding: 3px 7px; border-radius: 4px; background: rgba(128,128,128,0.08); display: inline-block; color: rgba(255,255,255,0.7); }
+.tma-order-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: rgba(255,255,255,0.15); }
+
+/* Order Detail */
+.tma-od-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.tma-od-header h3 { font-size: 16px; font-weight: 700; color: #fff; }
+
+.tma-fulfillment {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.tma-fulfillment-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tma-f-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.tma-f-step .f-icon { font-size: 18px; }
+.tma-f-step .f-label { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.8); }
+.tma-f-step.pending { opacity: 0.25; }
+.tma-f-line {
+  width: 28px;
+  height: 2px;
+  background: rgba(255,255,255,0.15);
+  margin: 0 6px;
+  margin-bottom: 16px;
+}
+.tma-f-line.done { background: var(--tg-blue); }
+.tma-f-note { text-align: center; font-size: 12px; color: var(--tg-hint); margin-top: 8px; }
+
+.tma-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--tg-hint);
+  margin-bottom: 6px;
+  margin-top: 10px;
+}
+.tma-item-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+}
+
+/* Return form */
+.tma-return-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+}
+.tma-return-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tg-blue);
+}
+.tma-form-textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  background: var(--tg-dark);
+  color: var(--tg-hint);
+  font-size: 13px;
+  min-height: 70px;
+  resize: none;
+  font-family: inherit;
+}
+
+/* Return card */
+.tma-return-card {
+  background: var(--tg-dark);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.tma-return-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.tma-return-items { font-size: 12px; color: var(--tg-hint); margin-bottom: 3px; }
+.tma-return-refund { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); }
+.tma-return-date { font-size: 10px; color: var(--tg-hint); margin-top: 3px; }
+
+/* Credits */
+.tma-credit-hero {
+  text-align: center;
+  padding: 28px 14px 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(42,171,238,0.1), rgba(42,171,238,0.03));
+  margin-bottom: 14px;
+}
+.tma-credit-icon { font-size: 32px; margin-bottom: 6px; }
+.tma-credit-amount { font-size: 36px; font-weight: 800; color: var(--tg-blue); letter-spacing: -1px; line-height: 1.1; }
+.tma-credit-label { font-size: 13px; color: var(--tg-hint); margin-top: 3px; }
+.tma-credit-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.tma-credit-entry.used { opacity: 0.4; }
+.tma-ce-source { font-size: 13px; font-weight: 600; color: #fff; }
+.tma-ce-date { font-size: 10px; color: var(--tg-hint); margin-top: 1px; }
+.tma-ce-amount { font-size: 13px; font-weight: 700; color: var(--tg-blue); text-align: right; }
+.tma-ce-sub { font-size: 10px; color: var(--tg-hint); text-align: right; }
+
+/* Messages */
+.tma-msg-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.tma-msg-bubble {
+  max-width: 78%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.tma-msg-out {
+  align-self: flex-end;
+  background: var(--tg-msg-out);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.tma-msg-in {
+  align-self: flex-start;
+  background: var(--tg-msg-in);
+  color: rgba(255,255,255,0.9);
+  border-bottom-left-radius: 4px;
+}
+.tma-msg-time { font-size: 10px; opacity: 0.5; text-align: right; margin-top: 3px; }
+.tma-msg-form {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.tma-msg-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  background: var(--tg-dark);
+  color: var(--tg-hint);
+  font-size: 13px;
+}
+.tma-msg-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--tg-blue);
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ================================================================ */
+/* ===== TELEGRAM BOT CHAT SECTION ===== */
+/* ================================================================ */
+
+.chat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px 36px;
+}
+.chat-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.chat-slot .screen-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.chat-slot .screen-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--lightning);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+/* Chat frame */
+.chat-frame {
+  width: 380px;
+  background: var(--tg-darker);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 16px 48px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--tg-dark);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--tg-blue), #1a8cd8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.chat-header-info h4 { font-size: 14px; font-weight: 600; color: #fff; }
+.chat-header-info p { font-size: 11px; color: var(--tg-hint); }
+.chat-body { padding: 12px; }
+
+/* Bot message bubble */
+.bot-msg {
+  background: var(--tg-msg-in);
+  border-radius: 4px 16px 16px 16px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  max-width: 100%;
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.5;
+}
+.bot-msg strong { color: #fff; }
+.bot-msg .sep {
+  display: block;
+  color: rgba(255,255,255,0.15);
+  font-size: 11px;
+  letter-spacing: -1px;
+  margin: 2px 0;
+  user-select: none;
+}
+.bot-msg code {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--tg-hint);
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 6px;
+  word-break: break-all;
+  line-height: 1.6;
+}
+.bot-msg .msg-time {
+  font-size: 10px;
+  color: rgba(255,255,255,0.25);
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* User message bubble */
+.user-msg {
+  background: var(--tg-msg-out);
+  border-radius: 16px 4px 16px 16px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  max-width: 80%;
+  margin-left: auto;
+  font-size: 13px;
+  color: #fff;
+  line-height: 1.4;
+}
+.user-msg .msg-time {
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  text-align: right;
+  margin-top: 3px;
+}
+
+/* Inline keyboard buttons */
+.inline-kb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+.inline-kb-row {
+  display: flex;
+  gap: 4px;
+}
+.inline-kb-btn {
+  flex: 1;
+  text-align: center;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tg-btn-text);
+  background: var(--tg-btn);
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  text-align: center;
+  padding: 60px 24px;
+  border-top: 1px solid var(--tg-separator);
+}
+.footer p { color: var(--text-dim); font-size: 13px; }
+.footer .brand { font-weight: 700; color: var(--accent); }
+.footer-link {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.footer-link:hover { color: var(--accent); }
+
+/* ===== ORDER DETAIL RETURN STATUS ===== */
+.tma-return-status {
+  background: var(--tg-dark);
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 8px;
+}
+.tma-return-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.tma-return-status-items { font-size: 11px; color: var(--tg-hint); }
+.tma-return-status-refund { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .phone-frame {
+    --phone-w: 320px;
+    --phone-h: 620px;
+    --phone-radius: 36px;
+  }
+  .chat-frame { width: 320px; }
+  .phone-grid, .chat-grid { gap: 32px 24px; }
+  .topnav { gap: 16px; padding: 0 16px; font-size: 11px; }
+  .section { padding: 60px 16px; }
+}
+@media (max-width: 480px) {
+  .phone-frame {
+    --phone-w: 280px;
+    --phone-h: 560px;
+    --phone-radius: 30px;
+  }
+  .chat-frame { width: 280px; }
+  .topnav .hide-mobile { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <a href="https://github.com/DoktorShift/telegramshop" class="topnav-back">← Docs</a>
+  <a href="#hero" class="logo">⚡ TelegramShop</a>
+  <a href="#tma" class="hide-mobile">Mini App</a>
+  <a href="#bot" class="hide-mobile">Bot Chat</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-badge">⚡ LNbits Extension</div>
+  <h1>Telegram <span class="accent">Shopping</span></h1>
+  <p class="subtitle">Every screen. Every flow. Bot + Mini App — the complete Lightning commerce experience inside Telegram.</p>
+  <div class="scroll-hint">
+    <span>Explore</span>
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 1: TELEGRAM MINI APP -->
+<!-- ================================================================ -->
+<section class="section" id="tma">
+  <div class="section-header">
+    <div class="section-label">Section 01</div>
+    <h2 class="section-title">Telegram Mini App</h2>
+    <p class="section-desc">A full storefront embedded inside Telegram. Browse, cart, checkout, orders, returns, credits, messaging — all native.</p>
+  </div>
+
+  <div class="phone-grid">
+
+    <!-- 1. HOME -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">1</span>Home</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div>
+              <div class="battery"><div class="battery-fill"></div></div>
+            </div>
+          </div>
+          <div class="phone-content">
+            <div class="tma-welcome">
+              <h3>⚡ Lightning Store</h3>
+              <p>Browse and pay with Lightning</p>
+            </div>
+            <div class="tma-search">🔍 Search products...</div>
+            <div class="tma-chips">
+              <div class="tma-chip active">All</div>
+              <div class="tma-chip">Electronics</div>
+              <div class="tma-chip">Clothing</div>
+              <div class="tma-chip">Accessories</div>
+            </div>
+            <div class="tma-product-grid">
+              <div class="tma-pcard">
+                <div class="tma-pcard-img img1"><span>🎧</span><span class="tma-pcard-badge">-20%</span></div>
+                <div class="tma-pcard-info">
+                  <div class="tma-pcard-title">Wireless Headphones</div>
+                  <div class="tma-pcard-price"><span class="original">62.49</span>49.99 USD</div>
+                  <div class="tma-pcard-stock">3 left</div>
+                </div>
+              </div>
+              <div class="tma-pcard">
+                <div class="tma-pcard-img img2"><span>👕</span></div>
+                <div class="tma-pcard-info">
+                  <div class="tma-pcard-title">Bitcoin T-Shirt</div>
+                  <div class="tma-pcard-price">29.99 USD</div>
+                  <div class="tma-pcard-cart-ind">1 in cart</div>
+                </div>
+              </div>
+              <div class="tma-pcard">
+                <div class="tma-pcard-img img3"><span>🔌</span></div>
+                <div class="tma-pcard-info">
+                  <div class="tma-pcard-title">USB-C Cable</div>
+                  <div class="tma-pcard-price">9.99 USD</div>
+                </div>
+              </div>
+              <div class="tma-pcard">
+                <div class="tma-pcard-img img4"><span>⌚</span></div>
+                <div class="tma-pcard-info">
+                  <div class="tma-pcard-title">Smart Watch</div>
+                  <div class="tma-pcard-price">199.99 USD</div>
+                </div>
+              </div>
+              <div class="tma-pcard">
+                <div class="tma-pcard-img img5"><span>🖱️</span><span class="tma-pcard-badge sold-out">Sold out</span></div>
+                <div class="tma-pcard-info">
+                  <div class="tma-pcard-title">Wireless Mouse</div>
+                  <div class="tma-pcard-price" style="color:var(--tg-hint);font-weight:600">Sold out</div>
+                </div>
+              </div>
+              <div class="tma-pcard">
+                <div class="tma-pcard-img img1"><span>🔋</span></div>
+                <div class="tma-pcard-info">
+                  <div class="tma-pcard-title">Power Bank 20K</div>
+                  <div class="tma-pcard-price">34.99 USD</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab active"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span><span class="tab-badge">2</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Product grid with search, categories, stock indicators, and cart badges</p>
+    </div>
+
+    <!-- 2. PRODUCT DETAIL -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">2</span>Product Detail</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <div class="tma-back">← Back to shop</div>
+            <div class="tma-detail-gallery">
+              <span>🎧</span>
+              <div class="dots"><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
+              <div class="counter">1 / 3</div>
+            </div>
+            <div class="tma-dtitle">Wireless Headphones</div>
+            <div class="tma-dcategory">Electronics</div>
+            <div class="tma-dprice">49.99 USD</div>
+            <div class="tma-ddesc">Premium wireless headphones with active noise cancellation. 30-hour battery life, USB-C charging, foldable design.</div>
+            <div class="tma-meta">
+              <span class="tma-meta-tag low">📦 3 in stock</span>
+              <span class="tma-meta-tag">SKU: WH-100</span>
+              <span class="tma-meta-tag">10% tax incl.</span>
+              <span class="tma-meta-tag">🚚 Shipping required</span>
+            </div>
+            <div class="tma-btn tma-btn-primary" style="margin-top:8px">Add to Cart</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span><span class="tab-badge">2</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Image gallery with swipe, meta tags, stock levels, and add-to-cart</p>
+    </div>
+
+    <!-- 3. CART -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">3</span>Cart</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px">Cart</h3>
+            <div class="tma-credit-banner">
+              <span>✨</span>
+              <span>You have <strong>5,000 sats</strong> in store credit</span>
+              <span style="color:rgba(255,255,255,0.15);font-size:18px;margin-left:auto">›</span>
+            </div>
+            <div class="tma-cart-item">
+              <div class="tma-cart-img" style="background:linear-gradient(135deg,#1a3a5c,#0d2137)">🎧</div>
+              <div class="tma-cart-info">
+                <div class="tma-cart-title">Wireless Headphones</div>
+                <div class="tma-cart-price-each">49.99 each</div>
+              </div>
+              <div class="tma-cart-right">
+                <div class="tma-cart-line-total">49.99 USD</div>
+                <div class="tma-qty"><span class="tma-qty-btn">−</span><span class="tma-qty-val">1</span><span class="tma-qty-btn">+</span></div>
+              </div>
+            </div>
+            <div class="tma-cart-item">
+              <div class="tma-cart-img" style="background:linear-gradient(135deg,#1a3a2a,#0d2118)">🔌</div>
+              <div class="tma-cart-info">
+                <div class="tma-cart-title">USB-C Cable</div>
+                <div class="tma-cart-price-each">9.99 each</div>
+              </div>
+              <div class="tma-cart-right">
+                <div class="tma-cart-line-total">19.98 USD</div>
+                <div class="tma-qty"><span class="tma-qty-btn">−</span><span class="tma-qty-val">2</span><span class="tma-qty-btn">+</span></div>
+              </div>
+            </div>
+            <div class="tma-summary">
+              <div class="tma-summary-row"><span>3 items</span><span>69.97 USD</span></div>
+              <div class="tma-summary-row credit"><span>✨ Store credit</span><span>−5,000 sats</span></div>
+              <div class="tma-summary-row total"><span>Total</span><span>7,450 sats</span></div>
+            </div>
+            <div class="tma-btn tma-btn-primary" style="margin-top:10px">Checkout – 7,450 sats</div>
+            <div class="tma-btn tma-btn-text">Clear cart</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab active"><span class="tab-icon">🛒</span><span>Cart</span><span class="tab-badge">2</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Cart with quantity controls, store credit banner, and totals</p>
+    </div>
+
+    <!-- 4. CHECKOUT -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">4</span>Checkout</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px">Checkout</h3>
+            <div class="tma-checkout-summary">
+              <div class="tma-checkout-item"><span>1× Wireless Headphones</span><span>49.99 USD</span></div>
+              <div class="tma-checkout-item"><span>2× USB-C Cable</span><span>19.98 USD</span></div>
+              <div class="tma-checkout-item credit"><span>✨ Store credit</span><span>−5,000 sats</span></div>
+              <div class="tma-checkout-item total"><span>Total</span><span>7,450 sats</span></div>
+            </div>
+            <div class="tma-form-group">
+              <div class="tma-form-label">Email</div>
+              <div class="tma-form-input">you@email.com</div>
+            </div>
+            <div class="tma-form-group">
+              <div class="tma-form-label">Full Name</div>
+              <div class="tma-form-input">Your full name</div>
+            </div>
+            <div class="tma-form-group">
+              <div class="tma-form-label">Street Address</div>
+              <div class="tma-form-input">123 Main St</div>
+            </div>
+            <div class="tma-form-group">
+              <div class="tma-form-label">Apt / Suite (optional)</div>
+              <div class="tma-form-input">Apt 4B</div>
+            </div>
+            <div class="tma-form-group">
+              <div class="tma-form-label">City</div>
+              <div class="tma-form-input">City</div>
+            </div>
+            <div class="tma-form-row">
+              <div class="tma-form-group">
+                <div class="tma-form-label">State</div>
+                <div class="tma-form-input">State</div>
+              </div>
+              <div class="tma-form-group">
+                <div class="tma-form-label">ZIP</div>
+                <div class="tma-form-input">12345</div>
+              </div>
+            </div>
+            <div class="tma-form-group">
+              <div class="tma-form-label">Country</div>
+              <div class="tma-form-input">Country</div>
+            </div>
+            <div class="tma-btn tma-btn-primary" style="margin-top:6px">Pay 7,450 sats ⚡</div>
+            <div class="tma-btn tma-btn-text">Back to cart</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Checkout form with buyer info collection and order summary</p>
+    </div>
+
+    <!-- 5. PAYMENT -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">5</span>Payment</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <div class="tma-payment">
+              <div class="tma-payment-icon">⚡</div>
+              <div class="tma-payment-amount">Pay 12,450 sats</div>
+              <div class="tma-payment-hint">Scan the QR code or copy the invoice</div>
+              <div class="tma-payment-credit">✨ Store credit applied: −5,000 sats</div>
+              <div class="tma-qr">
+                <svg viewBox="0 0 29 29" width="160" height="160" style="shape-rendering:crispEdges">
+                  <rect width="29" height="29" fill="#fff"/>
+                  <rect x="0" y="0" width="7" height="1" fill="#000"/><rect x="8" y="0" width="1" height="1" fill="#000"/><rect x="10" y="0" width="2" height="1" fill="#000"/><rect x="14" y="0" width="1" height="1" fill="#000"/><rect x="16" y="0" width="2" height="1" fill="#000"/><rect x="19" y="0" width="1" height="1" fill="#000"/><rect x="22" y="0" width="7" height="1" fill="#000"/>
+                  <rect x="0" y="1" width="1" height="1" fill="#000"/><rect x="6" y="1" width="1" height="1" fill="#000"/><rect x="9" y="1" width="2" height="1" fill="#000"/><rect x="13" y="1" width="1" height="1" fill="#000"/><rect x="15" y="1" width="2" height="1" fill="#000"/><rect x="22" y="1" width="1" height="1" fill="#000"/><rect x="28" y="1" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="2" width="1" height="1" fill="#000"/><rect x="2" y="2" width="3" height="1" fill="#000"/><rect x="6" y="2" width="1" height="1" fill="#000"/><rect x="8" y="2" width="3" height="1" fill="#000"/><rect x="12" y="2" width="2" height="1" fill="#000"/><rect x="16" y="2" width="3" height="1" fill="#000"/><rect x="22" y="2" width="1" height="1" fill="#000"/><rect x="24" y="2" width="3" height="1" fill="#000"/><rect x="28" y="2" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="3" width="1" height="1" fill="#000"/><rect x="2" y="3" width="3" height="1" fill="#000"/><rect x="6" y="3" width="1" height="1" fill="#000"/><rect x="10" y="3" width="1" height="1" fill="#000"/><rect x="14" y="3" width="1" height="1" fill="#000"/><rect x="18" y="3" width="2" height="1" fill="#000"/><rect x="22" y="3" width="1" height="1" fill="#000"/><rect x="24" y="3" width="3" height="1" fill="#000"/><rect x="28" y="3" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="4" width="1" height="1" fill="#000"/><rect x="2" y="4" width="3" height="1" fill="#000"/><rect x="6" y="4" width="1" height="1" fill="#000"/><rect x="9" y="4" width="3" height="1" fill="#000"/><rect x="13" y="4" width="1" height="1" fill="#000"/><rect x="15" y="4" width="1" height="1" fill="#000"/><rect x="19" y="4" width="1" height="1" fill="#000"/><rect x="22" y="4" width="1" height="1" fill="#000"/><rect x="24" y="4" width="3" height="1" fill="#000"/><rect x="28" y="4" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="5" width="1" height="1" fill="#000"/><rect x="6" y="5" width="1" height="1" fill="#000"/><rect x="8" y="5" width="1" height="1" fill="#000"/><rect x="12" y="5" width="2" height="1" fill="#000"/><rect x="17" y="5" width="2" height="1" fill="#000"/><rect x="22" y="5" width="1" height="1" fill="#000"/><rect x="28" y="5" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="6" width="7" height="1" fill="#000"/><rect x="8" y="6" width="1" height="1" fill="#000"/><rect x="10" y="6" width="1" height="1" fill="#000"/><rect x="12" y="6" width="1" height="1" fill="#000"/><rect x="14" y="6" width="1" height="1" fill="#000"/><rect x="16" y="6" width="1" height="1" fill="#000"/><rect x="18" y="6" width="1" height="1" fill="#000"/><rect x="20" y="6" width="1" height="1" fill="#000"/><rect x="22" y="6" width="7" height="1" fill="#000"/>
+                  <rect x="9" y="7" width="2" height="1" fill="#000"/><rect x="13" y="7" width="3" height="1" fill="#000"/><rect x="19" y="7" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="8" width="4" height="1" fill="#000"/><rect x="5" y="8" width="1" height="1" fill="#000"/><rect x="8" y="8" width="2" height="1" fill="#000"/><rect x="11" y="8" width="2" height="1" fill="#000"/><rect x="15" y="8" width="1" height="1" fill="#000"/><rect x="18" y="8" width="1" height="1" fill="#000"/><rect x="20" y="8" width="3" height="1" fill="#000"/><rect x="26" y="8" width="2" height="1" fill="#000"/>
+                  <!-- center area simplified -->
+                  <rect x="1" y="10" width="2" height="1" fill="#000"/><rect x="5" y="10" width="3" height="1" fill="#000"/><rect x="10" y="10" width="1" height="1" fill="#000"/><rect x="13" y="10" width="2" height="1" fill="#000"/><rect x="17" y="10" width="3" height="1" fill="#000"/><rect x="22" y="10" width="1" height="1" fill="#000"/><rect x="25" y="10" width="2" height="1" fill="#000"/>
+                  <rect x="0" y="12" width="3" height="1" fill="#000"/><rect x="6" y="12" width="2" height="1" fill="#000"/><rect x="10" y="12" width="3" height="1" fill="#000"/><rect x="15" y="12" width="2" height="1" fill="#000"/><rect x="19" y="12" width="1" height="1" fill="#000"/><rect x="23" y="12" width="3" height="1" fill="#000"/>
+                  <rect x="2" y="14" width="1" height="1" fill="#000"/><rect x="5" y="14" width="2" height="1" fill="#000"/><rect x="9" y="14" width="1" height="1" fill="#000"/><rect x="12" y="14" width="4" height="1" fill="#000"/><rect x="18" y="14" width="2" height="1" fill="#000"/><rect x="22" y="14" width="1" height="1" fill="#000"/><rect x="25" y="14" width="3" height="1" fill="#000"/>
+                  <!-- bottom fixed patterns -->
+                  <rect x="8" y="21" width="1" height="1" fill="#000"/><rect x="10" y="21" width="3" height="1" fill="#000"/><rect x="14" y="21" width="2" height="1" fill="#000"/><rect x="18" y="21" width="1" height="1" fill="#000"/><rect x="20" y="21" width="2" height="1" fill="#000"/>
+                  <rect x="0" y="22" width="7" height="1" fill="#000"/><rect x="9" y="22" width="2" height="1" fill="#000"/><rect x="13" y="22" width="1" height="1" fill="#000"/><rect x="16" y="22" width="3" height="1" fill="#000"/><rect x="20" y="22" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="23" width="1" height="1" fill="#000"/><rect x="6" y="23" width="1" height="1" fill="#000"/><rect x="8" y="23" width="3" height="1" fill="#000"/><rect x="14" y="23" width="2" height="1" fill="#000"/><rect x="19" y="23" width="1" height="1" fill="#000"/><rect x="22" y="23" width="2" height="1" fill="#000"/><rect x="26" y="23" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="24" width="1" height="1" fill="#000"/><rect x="2" y="24" width="3" height="1" fill="#000"/><rect x="6" y="24" width="1" height="1" fill="#000"/><rect x="9" y="24" width="1" height="1" fill="#000"/><rect x="11" y="24" width="2" height="1" fill="#000"/><rect x="15" y="24" width="1" height="1" fill="#000"/><rect x="18" y="24" width="2" height="1" fill="#000"/><rect x="22" y="24" width="3" height="1" fill="#000"/><rect x="27" y="24" width="2" height="1" fill="#000"/>
+                  <rect x="0" y="25" width="1" height="1" fill="#000"/><rect x="2" y="25" width="3" height="1" fill="#000"/><rect x="6" y="25" width="1" height="1" fill="#000"/><rect x="10" y="25" width="1" height="1" fill="#000"/><rect x="13" y="25" width="3" height="1" fill="#000"/><rect x="20" y="25" width="1" height="1" fill="#000"/><rect x="24" y="25" width="1" height="1" fill="#000"/><rect x="26" y="25" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="26" width="1" height="1" fill="#000"/><rect x="2" y="26" width="3" height="1" fill="#000"/><rect x="6" y="26" width="1" height="1" fill="#000"/><rect x="8" y="26" width="2" height="1" fill="#000"/><rect x="12" y="26" width="2" height="1" fill="#000"/><rect x="16" y="26" width="1" height="1" fill="#000"/><rect x="19" y="26" width="2" height="1" fill="#000"/><rect x="23" y="26" width="2" height="1" fill="#000"/><rect x="27" y="26" width="1" height="1" fill="#000"/>
+                  <rect x="0" y="27" width="1" height="1" fill="#000"/><rect x="6" y="27" width="1" height="1" fill="#000"/><rect x="9" y="27" width="1" height="1" fill="#000"/><rect x="11" y="27" width="3" height="1" fill="#000"/><rect x="17" y="27" width="2" height="1" fill="#000"/><rect x="21" y="27" width="1" height="1" fill="#000"/><rect x="25" y="27" width="3" height="1" fill="#000"/>
+                  <rect x="0" y="28" width="7" height="1" fill="#000"/><rect x="8" y="28" width="1" height="1" fill="#000"/><rect x="11" y="28" width="1" height="1" fill="#000"/><rect x="14" y="28" width="2" height="1" fill="#000"/><rect x="18" y="28" width="1" height="1" fill="#000"/><rect x="22" y="28" width="7" height="1" fill="#000"/>
+                </svg>
+              </div>
+              <div class="tma-bolt11">lnbc124500n1pjg7x0hpp5qe8v7tlm8kf3xdp82v...f4k9sn2g5tz9qxqyjw5qcqp2sp5...</div>
+              <div class="tma-btn tma-btn-pay">⚡ Tap to Pay</div>
+              <div class="tma-btn tma-btn-secondary" style="margin-top:6px">Copy Invoice</div>
+              <div style="font-size:11px;color:var(--tg-hint);margin-top:10px">Invoice expires in 15 minutes</div>
+              <div class="tma-payment-status">
+                <div class="tma-spinner-sm"></div>
+                Waiting for payment…
+              </div>
+            </div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Lightning invoice with QR, copy, tap-to-pay, and live payment polling</p>
+    </div>
+
+    <!-- 6. ORDERS -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">6</span>Orders</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px">My Orders</h3>
+            <div class="tma-order-card">
+              <div class="tma-order-header"><span class="tma-order-id">#a3f7c2d1</span><span class="tma-order-status paid">paid</span></div>
+              <div class="tma-order-items">1× Wireless Headphones, 2× USB-C Cable</div>
+              <div class="tma-order-footer"><span class="tma-order-amount">12,450 sats</span><span class="tma-order-date">2h ago</span></div>
+              <div class="tma-order-fulfillment">🚚 Shipping</div>
+              <div class="tma-order-arrow">›</div>
+            </div>
+            <div class="tma-order-card">
+              <div class="tma-order-header"><span class="tma-order-id">#b8e4f190</span><span class="tma-order-status paid">paid</span></div>
+              <div class="tma-order-items">1× Bitcoin T-Shirt</div>
+              <div class="tma-order-footer"><span class="tma-order-amount">5,200 sats</span><span class="tma-order-date">3d ago</span></div>
+              <div class="tma-order-fulfillment">✅ Delivered</div>
+              <div class="tma-order-arrow">›</div>
+            </div>
+            <div class="tma-order-card">
+              <div class="tma-order-header"><span class="tma-order-id">#c1d9e8a2</span><span class="tma-order-status expired">expired</span></div>
+              <div class="tma-order-items">1× Smart Watch</div>
+              <div class="tma-order-footer"><span class="tma-order-amount">32,000 sats</span><span class="tma-order-date">1w ago</span></div>
+              <div class="tma-order-arrow">›</div>
+            </div>
+            <div class="tma-btn tma-btn-text" style="margin-top:6px">View return requests</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab active"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Order history with status badges and fulfillment tracking</p>
+    </div>
+
+    <!-- 7. ORDER DETAIL -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">7</span>Order Detail</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <div class="tma-back">← Back to orders</div>
+            <div class="tma-od-header"><h3>Order #a3f7c2d1</h3><span class="tma-order-status paid">paid</span></div>
+            <div class="tma-fulfillment">
+              <div class="tma-fulfillment-steps">
+                <div class="tma-f-step"><div class="f-icon">📋</div><div class="f-label">Preparing</div></div>
+                <div class="tma-f-line done"></div>
+                <div class="tma-f-step"><div class="f-icon">🚚</div><div class="f-label">Shipping</div></div>
+                <div class="tma-f-line"></div>
+                <div class="tma-f-step pending"><div class="f-icon">✅</div><div class="f-label">Delivered</div></div>
+              </div>
+              <div class="tma-f-note">Tracking: LN-2024-XYZ</div>
+            </div>
+            <div class="tma-section-label">Items</div>
+            <div class="tma-item-row"><span>1× Wireless Headphones</span><span>49.99 USD</span></div>
+            <div class="tma-item-row"><span>2× USB-C Cable</span><span>19.98 USD</span></div>
+            <div class="tma-summary" style="margin-top:8px;margin-bottom:8px">
+              <div class="tma-summary-row total"><span>Total paid</span><span>12,450 sats</span></div>
+            </div>
+            <div style="font-size:12px;color:var(--tg-hint);margin-bottom:10px">Placed 2h ago</div>
+            <div class="tma-section-label">Returns</div>
+            <div class="tma-return-status">
+              <div class="tma-return-status-header"><span class="tma-order-status pending">Under review</span><span style="font-size:10px;color:var(--tg-hint)">1h ago</span></div>
+              <div class="tma-return-status-items">1× Wireless Headphones</div>
+              <div class="tma-return-status-refund">Refund: 8,500 sats</div>
+            </div>
+            <div class="tma-btn tma-btn-text" style="margin-top:8px">Message about this order</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Fulfillment tracker, items, return status, and messaging</p>
+    </div>
+
+    <!-- 8. RETURN FORM -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">8</span>Return Form</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px">Return Request</h3>
+            <div class="tma-back">← Back to order</div>
+            <div style="font-size:12px;color:var(--tg-hint);margin-bottom:10px">Select items to return from order #a3f7c2d1</div>
+            <label class="tma-return-check"><input type="checkbox" checked><span>1× Wireless Headphones — 49.99 USD</span></label>
+            <label class="tma-return-check"><input type="checkbox"><span>2× USB-C Cable — 19.98 USD</span></label>
+            <div class="tma-form-group" style="margin-top:14px">
+              <div class="tma-form-label">Reason for return</div>
+              <div class="tma-form-textarea" style="color:var(--tg-hint)">The headphones have a buzzing noise in the left ear. Tried resetting but the issue persists.</div>
+            </div>
+            <div class="tma-btn tma-btn-primary" style="margin-top:8px">Submit Return</div>
+            <div class="tma-btn tma-btn-text">Cancel</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Item selection with checkboxes and reason input</p>
+    </div>
+
+    <!-- 9. RETURNS LIST -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">9</span>Returns</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px">My Returns</h3>
+            <div class="tma-return-card">
+              <div class="tma-return-header"><span class="tma-order-id">#a3f7c2d1</span><span class="tma-order-status pending">Under review</span></div>
+              <div class="tma-return-items">1× Wireless Headphones</div>
+              <div class="tma-return-refund">8,500 sats</div>
+              <div class="tma-return-date">1h ago</div>
+            </div>
+            <div class="tma-return-card">
+              <div class="tma-return-header"><span class="tma-order-id">#d5e2f8b3</span><span class="tma-order-status paid">Refunded</span></div>
+              <div class="tma-return-items">1× Bluetooth Speaker</div>
+              <div class="tma-return-refund">5,000 sats (store credit)</div>
+              <div class="tma-return-date">5d ago</div>
+            </div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Return request history with status and refund details</p>
+    </div>
+
+    <!-- 10. CREDITS -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">10</span>Credits</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px">Store Credit</h3>
+            <div class="tma-back">← Back to cart</div>
+            <div class="tma-credit-hero">
+              <div class="tma-credit-icon">✨</div>
+              <div class="tma-credit-amount">5,000</div>
+              <div class="tma-credit-label">sats available</div>
+            </div>
+            <div style="text-align:center;font-size:12px;color:var(--tg-hint);margin-bottom:14px">Credits are automatically applied at checkout</div>
+            <div class="tma-section-label">Credit history</div>
+            <div class="tma-credit-entry">
+              <div><div class="tma-ce-source">↩️ Return refund</div><div class="tma-ce-date">5d ago</div></div>
+              <div><div class="tma-ce-amount">5,000 sats</div><div class="tma-ce-sub">5,000 sats total</div></div>
+            </div>
+            <div class="tma-credit-entry used">
+              <div><div class="tma-ce-source">🎁 Store credit</div><div class="tma-ce-date">2w ago</div></div>
+              <div><div class="tma-ce-amount">0 sats</div><div class="tma-ce-sub">2,000 used of 2,000</div></div>
+            </div>
+            <div class="tma-btn tma-btn-secondary" style="margin-top:14px">Browse products</div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Credit balance hero card with usage history</p>
+    </div>
+
+    <!-- 11. MESSAGES -->
+    <div class="phone-slot">
+      <div class="screen-label"><span class="screen-number">11</span>Messages</div>
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-statusbar"><span>9:41</span><div class="status-icons"><div class="signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:10px"></span></div><div class="battery"><div class="battery-fill"></div></div></div></div>
+          <div class="phone-content">
+            <h3 style="font-size:16px;font-weight:700;color:#fff;margin-bottom:10px">Messages</h3>
+            <div class="tma-msg-thread">
+              <div class="tma-msg-bubble tma-msg-out">
+                <div style="font-size:10px;opacity:0.6;margin-bottom:3px">📦 #a3f7c2d1</div>
+                <div>Hi, I have a question about my headphones order. When will it ship?</div>
+                <div class="tma-msg-time">2h ago</div>
+              </div>
+              <div class="tma-msg-bubble tma-msg-in">
+                <div>Hi! Your order is being packed right now. It should ship within 24 hours. You'll get a tracking number once it's dispatched. 📦</div>
+                <div class="tma-msg-time">1h ago</div>
+              </div>
+              <div class="tma-msg-bubble tma-msg-out">
+                <div>Perfect, thank you!</div>
+                <div class="tma-msg-time">45m ago</div>
+              </div>
+              <div class="tma-msg-bubble tma-msg-in">
+                <div>You're welcome! Let us know if you need anything else. Happy shopping! ⚡</div>
+                <div class="tma-msg-time">30m ago</div>
+              </div>
+            </div>
+            <div class="tma-msg-form">
+              <div class="tma-msg-input">Type a message…</div>
+              <div class="tma-msg-send">↑</div>
+            </div>
+          </div>
+          <div class="tma-tabbar">
+            <div class="tma-tab"><span class="tab-icon">🛍</span><span>Shop</span></div>
+            <div class="tma-tab"><span class="tab-icon">🛒</span><span>Cart</span></div>
+            <div class="tma-tab"><span class="tab-icon">📦</span><span>Orders</span></div>
+            <div class="tma-tab active"><span class="tab-icon">💬</span><span>Messages</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="screen-desc">Real-time chat with order context and directional bubbles</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: TELEGRAM BOT CHAT -->
+<!-- ================================================================ -->
+<section class="section" id="bot">
+  <div class="section-header">
+    <div class="section-label">Section 02</div>
+    <h2 class="section-title">Telegram Bot Chat</h2>
+    <p class="section-desc">Classic bot commands for quick access. Every message includes a button back to the Mini App — no dead ends.</p>
+  </div>
+
+  <div class="chat-grid">
+
+    <!-- 1. /start -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">1</span>/start Welcome</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="user-msg">/start<div class="msg-time">9:41</div></div>
+          <div class="bot-msg">
+            <strong>Lightning Store</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            Premium electronics &amp; accessories.<br><br>
+            ⚡ <strong>Lightning-powered shop</strong><br>
+            Browse products, pay instantly, track orders<br>
+            — all right here in Telegram.
+            <div class="msg-time">9:41</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍  Open Shop</div></div>
+            <div class="inline-kb-row">
+              <div class="inline-kb-btn">📦 Orders</div>
+              <div class="inline-kb-btn">📖 Help</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. /orders -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">2</span>/orders</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="user-msg">/orders<div class="msg-time">9:42</div></div>
+          <div class="bot-msg">
+            📦 <strong>Your Orders</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            ✅ <strong>#a3f7c2d1</strong> · 🚚 Shipping<br>
+            &nbsp;&nbsp;1× Wireless Headphones, 2× USB-C Cable<br>
+            &nbsp;&nbsp;💰 12,450 sats<br><br>
+            ✅ <strong>#b8e4f190</strong> · ✅ Delivered<br>
+            &nbsp;&nbsp;1× Bitcoin T-Shirt<br>
+            &nbsp;&nbsp;💰 5,200 sats<br><br>
+            ⏰ <strong>#c1d9e8a2</strong><br>
+            &nbsp;&nbsp;1× Smart Watch<br>
+            &nbsp;&nbsp;💰 32,000 sats
+            <div class="msg-time">9:42</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">💬 #a3f7c2d1</div><div class="inline-kb-btn">↩️ Return</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">💬 #b8e4f190</div><div class="inline-kb-btn">↩️ Return</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. /credits -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">3</span>/credits</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="user-msg">/credits<div class="msg-time">9:43</div></div>
+          <div class="bot-msg">
+            ✨ <strong>Store Credit</strong><br><br>
+            Your balance: <strong>5,000 sats</strong><br><br>
+            Credit is applied automatically at checkout.
+            <div class="msg-time">9:43</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. /message -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">4</span>/message</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="user-msg">/message<div class="msg-time">9:44</div></div>
+          <div class="bot-msg">
+            💬 <strong>Contact Us</strong><br><br>
+            Type your message below and we'll get back to you:
+            <div class="msg-time">9:44</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">❌ Cancel</div></div>
+          </div>
+          <div class="user-msg" style="margin-top:6px">When will my order ship?<div class="msg-time">9:44</div></div>
+          <div class="bot-msg">
+            ✅ Message sent! We'll get back to you soon.
+            <div class="msg-time">9:44</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍  Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. /help -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">5</span>/help</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="user-msg">/help<div class="msg-time">9:45</div></div>
+          <div class="bot-msg">
+            📖 <strong>How to Shop</strong><br><br>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            🛍 Tap <strong>Open Shop</strong> to browse and buy<br>
+            📦 /orders — View your orders<br>
+            ✨ /credits — Store credit balance<br>
+            💬 /message — Contact us<br>
+            📖 /help — This guide<br>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span><br>
+            Pay instantly with ⚡ Lightning!
+            <div class="msg-time">9:45</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Payment Confirmed -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">6</span>Payment Confirmed</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            ✅ <strong>Payment Confirmed!</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            Thank you for your order!<br><br>
+            <strong>Order #a3f7c2d1</strong><br>
+            &nbsp;&nbsp;1× Wireless Headphones<br>
+            &nbsp;&nbsp;2× USB-C Cable<br>
+            💰 Total: 12,450 sats<br>
+            ✨ Store credit: 5,000 sats
+            <div class="msg-time">9:46</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">📦 My Orders</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Invoice Created -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">7</span>Invoice Created</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            ⚡ <strong>Invoice Created</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            <strong>Order #a3f7c2d1</strong><br>
+            💰 Total: <strong>12,450 sats</strong><br>
+            ✨ Store credit: -5,000 sats<br>
+            (~69.97 USD)<br><br>
+            ⏰ Expires in 15 minutes
+            <code>lnbc124500n1pjg7x0hpp5qe8v7tlm8kf3xdp82vjt4k9sn2g5tz9qxqyjw5qcqp2sp5...</code>
+            Copy and pay with any ⚡ Lightning wallet.
+            <div class="msg-time">9:46</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">⚡ Pay Now</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Return Item Selection -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">8</span>Return Selection</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            ↩️ <strong>Return Request</strong><br>
+            Order #a3f7c2d1<br><br>
+            Select items to return:
+            <div class="msg-time">9:47</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">☑ Wireless Headphones (1×)</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">☐ USB-C Cable (2×)</div></div>
+            <div class="inline-kb-row">
+              <div class="inline-kb-btn">✅ Confirm</div>
+              <div class="inline-kb-btn">❌ Cancel</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Return Submitted -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">9</span>Return Submitted</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            ↩️ <strong>Return Requested</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            Your return request has been submitted.<br><br>
+            Items: 1× Wireless Headphones<br>
+            💰 Refund amount: 8,500 sats<br><br>
+            We'll review your request shortly.
+            <div class="msg-time">9:48</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Refund Prompt -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">10</span>Refund Prompt</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            ✅ <strong>Return Approved!</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            Your refund of <strong>8,500 sats</strong> is ready to be sent.<br><br>
+            Please send one of the following:<br>
+            - A ⚡ <strong>Lightning invoice</strong> for 8,500 sats<br>
+            - Your ⚡ <strong>Lightning address</strong> (e.g. you@wallet.com)<br><br>
+            Paste it below:
+            <div class="msg-time">9:49</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">❌ Cancel</div></div>
+          </div>
+          <div class="user-msg" style="margin-top:6px">user@getalby.com<div class="msg-time">9:49</div></div>
+          <div class="bot-msg">
+            ✅ <strong>Refund Sent!</strong><br><br>
+            Your refund has been processed successfully.
+            <div class="msg-time">9:49</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">🛍  Open Shop</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Fulfillment Update -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">11</span>Fulfillment Update</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            📦 <strong>Order Update</strong><br><br>
+            Order #a3f7c2d1 → <strong>🚚 Shipping</strong><br><br>
+            📝 Tracking: LN-2024-XYZ-789. Estimated delivery in 3-5 business days.
+            <div class="msg-time">10:15</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">📦 View Orders</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12. Admin Reply -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">12</span>Admin Reply</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            💬 <strong>Message from Shop</strong><br><br>
+            📦 Regarding Order #a3f7c2d1<br><br>
+            "Your order has been shipped! Tracking number: LN-2024-XYZ. Let us know if you need anything."
+            <div class="msg-time">10:20</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row">
+              <div class="inline-kb-btn">💬 Reply</div>
+              <div class="inline-kb-btn">🛍 Shop</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>Created by <a href="https://github.com/DoktorShift" class="footer-link">DrShift</a></p>
+  <p style="margin-top:6px"><a href="https://lnbits.com" class="footer-link brand">LNbits</a> extension</p>
+</footer>
+
+</body>
+</html>

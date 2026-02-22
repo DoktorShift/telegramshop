@@ -69,6 +69,13 @@ class TelegramBot:
             f"index.html?shop={self.shop.id}"
         )
 
+    @property
+    def _shop_keyboard(self) -> dict:
+        """Inline keyboard with a single 'Open Shop' web_app button."""
+        return self._inline_keyboard(
+            [[{"text": "🛍  Open Shop", "web_app": {"url": self.tma_url}}]]
+        )
+
     @staticmethod
     def _is_valid_photo_url(url: Optional[str]) -> bool:
         """Return True if *url* can be sent to Telegram as a photo."""
@@ -725,7 +732,11 @@ class TelegramBot:
                 order_id=session.pending_order_id,
             )
             session.state = UserState.BROWSING
-            await self.send_message(chat_id, "✅ Message sent! We'll get back to you soon.")
+            await self.send_message(
+                chat_id,
+                "✅ Message sent! We'll get back to you soon.",
+                reply_markup=self._shop_keyboard,
+            )
             await self.notify_admin_message(chat_id, username, text, session.pending_order_id)
 
         elif session.state == UserState.WAITING_RETURN_REASON:
@@ -734,6 +745,7 @@ class TelegramBot:
                     chat_id,
                     "⚠️ Please provide a more detailed reason "
                     "(at least a few words) so we can process your return.",
+                    reply_markup=self._shop_keyboard,
                 )
                 return
             await self.submit_return(chat_id, text.strip())
@@ -866,6 +878,7 @@ class TelegramBot:
         if not session.cart:
             await self._send_or_edit(
                 chat_id, "🛒 Your cart is empty.",
+                reply_markup=self._shop_keyboard,
                 edit_message_id=edit_message_id,
             )
             return
@@ -965,7 +978,11 @@ class TelegramBot:
             )
         except Exception as e:
             logger.error(f"Failed to create invoice: {e}")
-            await self.send_message(chat_id, "❌ Something went wrong creating your invoice. Please try again.")
+            await self.send_message(
+                chat_id,
+                "❌ Something went wrong creating your invoice. Please try again.",
+                reply_markup=self._shop_keyboard,
+            )
             return
 
         order = await create_order(
@@ -1092,7 +1109,9 @@ class TelegramBot:
         if issues:
             text = "⚠️ <b>Stock Issues</b>\n\n" + "\n".join(issues)
             text += "\n\nPlease update your cart."
-            await self.send_message(chat_id, text)
+            await self.send_message(
+                chat_id, text, reply_markup=self._shop_keyboard,
+            )
             return False
         return True
 
@@ -1204,12 +1223,14 @@ class TelegramBot:
         if not order or order.telegram_chat_id != chat_id:
             await self._send_or_edit(
                 chat_id, "❌ Order not found.",
+                reply_markup=self._shop_keyboard,
                 edit_message_id=edit_message_id,
             )
             return
         if order.status != "paid":
             await self._send_or_edit(
                 chat_id, "❌ Returns are only available for completed orders.",
+                reply_markup=self._shop_keyboard,
                 edit_message_id=edit_message_id,
             )
             return
@@ -1334,7 +1355,10 @@ class TelegramBot:
         session = self.get_session(chat_id)
         order = await get_order(session.pending_order_id or "")
         if not order:
-            await self.send_message(chat_id, "❌ Order not found.")
+            await self.send_message(
+                chat_id, "❌ Order not found.",
+                reply_markup=self._shop_keyboard,
+            )
             session.state = UserState.BROWSING
             return
 
@@ -1344,6 +1368,7 @@ class TelegramBot:
                 chat_id,
                 "↩️ A return for this order already exists. "
                 "You cannot submit another one.",
+                reply_markup=self._shop_keyboard,
             )
             session.state = UserState.BROWSING
             session.pending_return_items = None
@@ -1355,7 +1380,10 @@ class TelegramBot:
         return_items = [i for i in cart_items if i["product_id"] in selected]
 
         if not return_items:
-            await self.send_message(chat_id, "⚠️ No items selected for return.")
+            await self.send_message(
+                chat_id, "⚠️ No items selected for return.",
+                reply_markup=self._shop_keyboard,
+            )
             session.state = UserState.BROWSING
             return
 
@@ -1427,6 +1455,7 @@ class TelegramBot:
                         chat_id,
                         "❌ Could not determine the refund amount. "
                         "Please contact us via /message.",
+                        reply_markup=self._shop_keyboard,
                     )
                     return
                 await self.send_message(
@@ -1445,6 +1474,9 @@ class TelegramBot:
                     chat_id,
                     "❌ Could not resolve that address. Please try again "
                     "with a ⚡ Lightning invoice or Lightning address.",
+                    reply_markup=self._inline_keyboard(
+                        [[{"text": "❌ Cancel", "callback_data": "cancel"}]]
+                    ),
                 )
                 session.state = UserState.WAITING_REFUND_INVOICE
                 session.pending_refund_sats = amount_sats
@@ -1460,6 +1492,7 @@ class TelegramBot:
                 chat_id,
                 "✅ <b>Refund Sent!</b>\n\n"
                 "Your refund has been processed successfully.",
+                reply_markup=self._shop_keyboard,
             )
         except Exception as e:
             logger.error(f"Refund payment failed: {e}")
@@ -1468,6 +1501,9 @@ class TelegramBot:
                 "❌ We couldn't process the refund. "
                 "Please check your input and try again, "
                 "or contact us via /message.",
+                reply_markup=self._inline_keyboard(
+                    [[{"text": "❌ Cancel", "callback_data": "cancel"}]]
+                ),
             )
             session.state = UserState.WAITING_REFUND_INVOICE
             session.pending_refund_sats = amount_sats
