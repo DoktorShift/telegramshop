@@ -50,13 +50,15 @@ Everything else has sensible defaults.
 Toggle the shop **on**. That's it. The bot:
 
 - Fetches your product catalog
-- Registers commands with Telegram
+- Registers the `/start` command with Telegram
 - Sets up a secure webhook (or starts polling)
 - Creates default marketing campaigns (disabled)
 
 ### 5. Test it
 
-Open your bot in Telegram → send `/start` → tap **Open Shop**.
+Open your bot in Telegram → send `/start` → tap **Open Shop** to launch the Mini App.
+
+The Mini App is where everything happens: browsing, cart, checkout, orders, returns, credits, and messaging.
 
 ---
 

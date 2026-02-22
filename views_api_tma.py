@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Header, Request
 from loguru import logger
 
 from lnbits.core.services import create_invoice
+from lnbits.helpers import urlsafe_short_hash
 from lnbits.settings import settings
 
 from .helpers import tma_auth_limiter
@@ -50,6 +51,12 @@ from .models import (
     TmaUser,
 )
 from .product_sources import fetch_inventory_products
+from .services import (
+    calculate_cart as calc_cart,
+    cart_has_physical_items,
+    sats_amount as to_sats,
+    validate_stock,
+)
 from .tasks import bot_manager
 from .tma_auth import validate_init_data
 
@@ -97,6 +104,9 @@ async def tma_auth(data: TmaAuthRequest, request: Request):
         shop.id, user.chat_id, user.username, user.first_name
     )
 
+    bot = bot_manager.get_bot(data.shop_id)
+    bot_username = bot._bot_username if bot else None
+
     return TmaAuthResponse(
         chat_id=user.chat_id,
         username=user.username,
@@ -105,6 +115,7 @@ async def tma_auth(data: TmaAuthRequest, request: Request):
         checkout_mode=shop.checkout_mode,
         allow_returns=shop.allow_returns,
         welcome_text=shop.description,
+        bot_username=bot_username,
     )
 
 
@@ -285,27 +296,20 @@ async def tma_checkout(
 
     cart_items = [CartItem(**item) for item in cart_items_raw]
 
-    # Calculate totals using bot's calculate_cart if available
+    # Validate stock before checkout
     bot = bot_manager.get_bot(shop_id)
-    if bot:
-        # Build a temporary session-like object for calculation
-        from .models import UserSession
+    products = bot.products if bot else []
+    if products:
+        issues = validate_stock(cart_items, products)
+        if issues:
+            raise HTTPException(
+                HTTPStatus.CONFLICT, {"stock_issues": issues}
+            )
 
-        temp_session = UserSession()
-        temp_session.cart = cart_items
-        _, _, _, total = bot.calculate_cart(temp_session)
-        total_sats = await bot.sats_amount(total)
-        has_physical = bot.cart_has_physical_items(temp_session)
-    else:
-        # Fallback: simple calculation without shipping/tax
-        from lnbits.utils.exchange_rates import fiat_amount_as_satoshis
-
-        total = sum(item.price * item.quantity for item in cart_items)
-        if shop.currency == "sat":
-            total_sats = int(total)
-        else:
-            total_sats = await fiat_amount_as_satoshis(total, shop.currency)
-        has_physical = False
+    # Calculate totals using pure business logic
+    _, _, _, total = calc_cart(cart_items, products, shop)
+    total_sats = await to_sats(total, shop.currency)
+    has_physical = cart_has_physical_items(cart_items, products)
 
     # Apply store credit
     credit_used = 0
@@ -321,7 +325,7 @@ async def tma_checkout(
         # Fully covered by credit
         order = await create_order(
             shop_id=shop_id,
-            payment_hash="credit_" + str(user.chat_id),
+            payment_hash="credit_" + urlsafe_short_hash(),
             telegram_chat_id=user.chat_id,
             telegram_username=user.username,
             amount_sats=0,
@@ -557,18 +561,9 @@ async def tma_submit_return(
         i["price"] * i["quantity"] for i in return_items
     )
 
-    bot = bot_manager.get_bot(shop_id)
-    if bot:
-        refund_sats = await bot.sats_amount(refund_amount)
-    else:
-        from lnbits.utils.exchange_rates import fiat_amount_as_satoshis
+    refund_sats = await to_sats(refund_amount, shop.currency)
 
-        if shop.currency == "sat":
-            refund_sats = int(refund_amount)
-        else:
-            refund_sats = await fiat_amount_as_satoshis(
-                refund_amount, shop.currency
-            )
+    bot = bot_manager.get_bot(shop_id)
 
     ret = await create_return(
         shop_id=shop_id,

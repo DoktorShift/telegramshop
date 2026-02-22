@@ -6,6 +6,7 @@ const TMA = {
   initData: null,
   chatId: null,
   username: null,
+  botUsername: null,
   shopTitle: '',
   shopCurrency: 'sat',
   checkoutMode: 'none',
@@ -115,6 +116,7 @@ const TMA = {
       })
       this.chatId = data.chat_id
       this.username = data.username
+      this.botUsername = data.bot_username || null
       this.shopTitle = data.shop_title
       this.shopCurrency = data.shop_currency
       this.checkoutMode = data.checkout_mode
@@ -151,8 +153,14 @@ const TMA = {
 
       // Extract shop title from first product category or keep existing
       // (for unauthenticated users who can't call /auth)
-    } catch {
+    } catch (e) {
       this.products = []
+      const container = document.getElementById('products-grid')
+      if (container) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--hint-color)">' +
+          '<p>Could not load products</p>' +
+          '<button class="btn-secondary" onclick="TMA.loadProducts()">Retry</button></div>'
+      }
     }
     if (loading) loading.style.display = 'none'
   },
@@ -193,6 +201,7 @@ const TMA = {
       })
     } catch (e) {
       console.error('Save cart failed:', e)
+      this.showToast('Could not save cart')
     }
   },
 
@@ -636,8 +645,22 @@ const TMA = {
     // Back link for browser (no Telegram BackButton)
     const backHtml = '<button class="back-link" onclick="TMA.navigate(\'#/\')">\u2190 Back to shop</button>'
 
+    let shareHtml = ''
+    if (this.botUsername) {
+      shareHtml = '<button class="btn-share" onclick="TMA.shareProduct(\'' + productId + '\')" title="Share">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>' +
+        '<polyline points="16 6 12 2 8 6"/>' +
+        '<line x1="12" y1="2" x2="12" y2="15"/>' +
+        '</svg>' +
+        '</button>'
+    }
+
     container.innerHTML = backHtml + galleryHtml +
-      '<h1>' + this.escapeHtml(product.title) + '</h1>' +
+      '<div class="detail-title-row">' +
+        '<h1>' + this.escapeHtml(product.title) + '</h1>' +
+        shareHtml +
+      '</div>' +
       (product.category ? '<div class="detail-category">' + this.escapeHtml(product.category) + '</div>' : '') +
       priceHtml +
       (product.description ? '<div class="detail-desc">' + this.escapeHtml(product.description) + '</div>' : '') +
@@ -929,6 +952,13 @@ const TMA = {
   },
 
   // ===== Checkout Flow =====
+  _cartHasPhysical() {
+    return this.cart.some(item => {
+      const p = this.products.find(pr => pr.id === item.product_id)
+      return p && p.requires_shipping
+    })
+  },
+
   startCheckout() {
     if (!this.authenticated) {
       this.showToast('Please open from Telegram')
@@ -936,7 +966,7 @@ const TMA = {
     }
     if (this.cart.length === 0) return
 
-    if (this.checkoutMode === 'none') {
+    if (this.checkoutMode === 'none' && !this._cartHasPhysical()) {
       this.submitCheckout({})
     } else {
       this.navigate('#/checkout')
@@ -945,8 +975,9 @@ const TMA = {
 
   renderCheckout() {
     const container = document.getElementById('checkout-content')
+    const hasPhysical = this._cartHasPhysical()
     const needsEmail = this.checkoutMode === 'email' || this.checkoutMode === 'address'
-    const needsAddress = this.checkoutMode === 'address'
+    const needsAddress = this.checkoutMode === 'address' || hasPhysical
 
     // Order summary at top
     const total = this.cartTotal()
@@ -1036,7 +1067,7 @@ const TMA = {
     const emailEl = document.getElementById('checkout-email')
     if (emailEl) body.buyer_email = emailEl.value
 
-    if (this.checkoutMode === 'address') {
+    if (this.checkoutMode === 'address' || this._cartHasPhysical()) {
       body.buyer_name = (document.getElementById('checkout-name') || {}).value || ''
       const parts = [
         (document.getElementById('checkout-street') || {}).value || '',
@@ -1054,17 +1085,40 @@ const TMA = {
 
   async submitCheckout(body) {
     try {
-      const result = await this.api('/' + this.shopId + '/checkout', {
+      const url = this.baseUrl + '/' + this.shopId + '/checkout'
+      const headers = { 'Content-Type': 'application/json' }
+      if (this.initData) headers['Authorization'] = 'tma ' + this.initData
+
+      const resp = await fetch(url, {
         method: 'POST',
-        body,
+        headers,
+        body: JSON.stringify(body),
       })
+
+      if (resp.status === 409) {
+        const data = await resp.json().catch(() => ({}))
+        const issues = (data.detail && data.detail.stock_issues) || []
+        const msg = issues.length
+          ? issues.join('\n')
+          : 'Some items are no longer available'
+        this.showToast(msg)
+        await this.loadProducts()
+        this.navigate('#/cart')
+        return
+      }
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}))
+        throw new Error(err.detail || 'HTTP ' + resp.status)
+      }
+
+      const result = await resp.json()
 
       if (result.status === 'paid') {
         this.cart = []
         this.updateCartBadge()
         this.haptic('notification', 'success')
         this.showToast('Order placed!')
-        // Refresh products for updated inventory
         this.loadProducts()
         this.loadCredits()
         this.navigate('#/order/' + result.order_id)
@@ -1078,7 +1132,6 @@ const TMA = {
       this.showPaymentScreen(result)
     } catch (e) {
       this.showToast('Checkout failed: ' + e.message)
-      // Re-enable button
       const btn = document.getElementById('checkout-submit-btn')
       if (btn) {
         btn.disabled = false
@@ -1133,14 +1186,9 @@ const TMA = {
     const container = document.getElementById('payment-qr')
     if (!container) return
 
-    // Simple QR using an API — pyqrcode is server-side only
-    // Use a client-side QR approach: create via canvas API
-    // For simplicity and no-dependency, use a data URI from the server or
-    // a lightweight inline QR encoder
+    // Use LNbits core QR endpoint (SVG, no external dependency)
     const size = 220
-    const url = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size +
-      '&data=' + encodeURIComponent(data.toUpperCase()) +
-      '&format=svg&qzone=1&color=000000'
+    const url = '/api/v1/qrcode/' + encodeURIComponent(data.toUpperCase())
     container.innerHTML = '<img src="' + url + '" alt="QR Code" width="' + size +
       '" height="' + size + '" style="border-radius:12px;background:#fff;padding:8px">'
   },
@@ -1157,6 +1205,37 @@ const TMA = {
       document.execCommand('copy')
       document.body.removeChild(ta)
       this.showToast('Invoice copied!')
+    })
+  },
+
+  shareProduct(productId) {
+    if (!this.botUsername) return
+    const product = this.products.find(p => p.id === productId)
+    if (!product) return
+
+    const url = 'https://t.me/' + this.botUsername + '?start=product_' + productId
+    const text = product.title + ' — ' + this.formatPrice(product.price)
+
+    // Use Telegram's native share if available
+    const tg = window.Telegram && window.Telegram.WebApp
+    if (tg && tg.switchInlineQuery) {
+      // switchInlineQuery opens the inline query picker with pre-filled text
+      tg.switchInlineQuery(product.title, ['users', 'groups', 'channels'])
+      return
+    }
+
+    // Fallback: copy link to clipboard
+    navigator.clipboard.writeText(url).then(() => {
+      this.showToast('Link copied!')
+      this.haptic('notification', 'success')
+    }).catch(() => {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      this.showToast('Link copied!')
     })
   },
 
@@ -1178,7 +1257,7 @@ const TMA = {
       if (attempts > 100) {
         this._stopPolling()
         const el = document.getElementById('payment-status')
-        if (el) el.innerHTML = '\u23f0 Invoice may have expired. <button class="btn-text" onclick="TMA.navigate(\'#/orders\')">Check orders</button>'
+        if (el) el.innerHTML = '\u23f0 Invoice expired. <button class="btn-text" onclick="TMA.navigate(\'#/cart\')">Tap to try again</button>'
         return
       }
       try {

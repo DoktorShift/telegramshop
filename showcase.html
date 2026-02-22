@@ -538,6 +538,20 @@ body::before {
 }
 
 .tma-back { color: var(--tg-blue); font-size: 13px; margin-bottom: 10px; display: block; }
+.tma-dtitle-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tma-dtitle-row .tma-dtitle { flex: 1; min-width: 0; }
+.tma-share-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--tg-dark);
+  color: var(--tg-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
 .tma-dtitle { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 3px; }
 .tma-dcategory { font-size: 12px; color: var(--tg-hint); margin-bottom: 8px; }
 .tma-dprice { font-size: 20px; font-weight: 700; color: var(--tg-blue); margin-bottom: 10px; }
@@ -1158,6 +1172,86 @@ body::before {
 .tma-return-status-items { font-size: 11px; color: var(--tg-hint); }
 .tma-return-status-refund { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 2px; }
 
+/* ===== DEEP LINK & INLINE CARDS ===== */
+.feature-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 64px;
+}
+.feature-card {
+  background: var(--surface-2);
+  border: 1px solid var(--tg-separator);
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 380px;
+  flex: 1;
+  min-width: 280px;
+}
+.feature-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+.feature-card h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.feature-card p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.feature-card-code {
+  background: var(--surface-3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Inline result preview */
+.inline-preview {
+  background: var(--tg-dark);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.inline-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.inline-preview-row:last-child { border-bottom: none; }
+.inline-preview-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.inline-preview-info { flex: 1; min-width: 0; }
+.inline-preview-title { font-size: 12px; font-weight: 600; color: #fff; }
+.inline-preview-price { font-size: 11px; color: var(--tg-blue); }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .phone-frame {
@@ -1188,14 +1282,14 @@ body::before {
   <a href="https://github.com/DoktorShift/telegramshop" class="topnav-back">← Docs</a>
   <a href="#hero" class="logo">⚡ TelegramShop</a>
   <a href="#tma" class="hide-mobile">Mini App</a>
-  <a href="#bot" class="hide-mobile">Bot Chat</a>
+  <a href="#bot" class="hide-mobile">Bot &amp; Sharing</a>
 </nav>
 
 <!-- HERO -->
 <section class="hero" id="hero">
   <div class="hero-badge">⚡ LNbits Extension</div>
   <h1>Telegram <span class="accent">Shopping</span></h1>
-  <p class="subtitle">Every screen. Every flow. Bot + Mini App — the complete Lightning commerce experience inside Telegram.</p>
+  <p class="subtitle">Every screen. Every flow. A full Lightning storefront inside Telegram — powered by a Mini App.</p>
   <div class="scroll-hint">
     <span>Explore</span>
     <div class="arrow"></div>
@@ -1309,7 +1403,16 @@ body::before {
               <div class="dots"><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
               <div class="counter">1 / 3</div>
             </div>
-            <div class="tma-dtitle">Wireless Headphones</div>
+            <div class="tma-dtitle-row">
+              <div class="tma-dtitle">Wireless Headphones</div>
+              <div class="tma-share-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                  <polyline points="16 6 12 2 8 6"/>
+                  <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+              </div>
+            </div>
             <div class="tma-dcategory">Electronics</div>
             <div class="tma-dprice">49.99 USD</div>
             <div class="tma-ddesc">Premium wireless headphones with active noise cancellation. 30-hour battery life, USB-C charging, foldable design.</div>
@@ -1329,7 +1432,7 @@ body::before {
           </div>
         </div>
       </div>
-      <p class="screen-desc">Image gallery with swipe, meta tags, stock levels, and add-to-cart</p>
+      <p class="screen-desc">Image gallery with swipe, share button, meta tags, stock levels, and add-to-cart</p>
     </div>
 
     <!-- 3. CART -->
@@ -1740,13 +1843,13 @@ body::before {
 </section>
 
 <!-- ================================================================ -->
-<!-- SECTION 2: TELEGRAM BOT CHAT -->
+<!-- SECTION 2: BOT LAUNCHER & NOTIFICATIONS -->
 <!-- ================================================================ -->
 <section class="section" id="bot">
   <div class="section-header">
     <div class="section-label">Section 02</div>
-    <h2 class="section-title">Telegram Bot Chat</h2>
-    <p class="section-desc">Classic bot commands for quick access. Every message includes a button back to the Mini App — no dead ends.</p>
+    <h2 class="section-title">Bot, Notifications &amp; Sharing</h2>
+    <p class="section-desc">The bot is a thin launcher — /start opens the Mini App. Notifications keep customers informed with deep links back into the shop.</p>
   </div>
 
   <div class="chat-grid">
@@ -1765,140 +1868,20 @@ body::before {
             <strong>Lightning Store</strong>
             <span class="sep">━━━━━━━━━━━━━━━━━━</span>
             Premium electronics &amp; accessories.<br><br>
-            ⚡ <strong>Lightning-powered shop</strong><br>
             Browse products, pay instantly, track orders<br>
             — all right here in Telegram.
             <div class="msg-time">9:41</div>
           </div>
           <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍  Open Shop</div></div>
-            <div class="inline-kb-row">
-              <div class="inline-kb-btn">📦 Orders</div>
-              <div class="inline-kb-btn">📖 Help</div>
-            </div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">Open Shop</div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 2. /orders -->
+    <!-- 2. Payment Confirmed -->
     <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">2</span>/orders</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="user-msg">/orders<div class="msg-time">9:42</div></div>
-          <div class="bot-msg">
-            📦 <strong>Your Orders</strong>
-            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
-            ✅ <strong>#a3f7c2d1</strong> · 🚚 Shipping<br>
-            &nbsp;&nbsp;1× Wireless Headphones, 2× USB-C Cable<br>
-            &nbsp;&nbsp;💰 12,450 sats<br><br>
-            ✅ <strong>#b8e4f190</strong> · ✅ Delivered<br>
-            &nbsp;&nbsp;1× Bitcoin T-Shirt<br>
-            &nbsp;&nbsp;💰 5,200 sats<br><br>
-            ⏰ <strong>#c1d9e8a2</strong><br>
-            &nbsp;&nbsp;1× Smart Watch<br>
-            &nbsp;&nbsp;💰 32,000 sats
-            <div class="msg-time">9:42</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">💬 #a3f7c2d1</div><div class="inline-kb-btn">↩️ Return</div></div>
-            <div class="inline-kb-row"><div class="inline-kb-btn">💬 #b8e4f190</div><div class="inline-kb-btn">↩️ Return</div></div>
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. /credits -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">3</span>/credits</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="user-msg">/credits<div class="msg-time">9:43</div></div>
-          <div class="bot-msg">
-            ✨ <strong>Store Credit</strong><br><br>
-            Your balance: <strong>5,000 sats</strong><br><br>
-            Credit is applied automatically at checkout.
-            <div class="msg-time">9:43</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. /message -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">4</span>/message</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="user-msg">/message<div class="msg-time">9:44</div></div>
-          <div class="bot-msg">
-            💬 <strong>Contact Us</strong><br><br>
-            Type your message below and we'll get back to you:
-            <div class="msg-time">9:44</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">❌ Cancel</div></div>
-          </div>
-          <div class="user-msg" style="margin-top:6px">When will my order ship?<div class="msg-time">9:44</div></div>
-          <div class="bot-msg">
-            ✅ Message sent! We'll get back to you soon.
-            <div class="msg-time">9:44</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍  Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. /help -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">5</span>/help</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="user-msg">/help<div class="msg-time">9:45</div></div>
-          <div class="bot-msg">
-            📖 <strong>How to Shop</strong><br><br>
-            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
-            🛍 Tap <strong>Open Shop</strong> to browse and buy<br>
-            📦 /orders — View your orders<br>
-            ✨ /credits — Store credit balance<br>
-            💬 /message — Contact us<br>
-            📖 /help — This guide<br>
-            <span class="sep">━━━━━━━━━━━━━━━━━━</span><br>
-            Pay instantly with ⚡ Lightning!
-            <div class="msg-time">9:45</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 6. Payment Confirmed -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">6</span>Payment Confirmed</div>
+      <div class="screen-label"><span class="screen-number">2</span>Payment Confirmed</div>
       <div class="chat-frame">
         <div class="chat-header">
           <div class="chat-avatar">⚡</div>
@@ -1906,27 +1889,27 @@ body::before {
         </div>
         <div class="chat-body">
           <div class="bot-msg">
-            ✅ <strong>Payment Confirmed!</strong>
+            <strong>Payment Confirmed!</strong>
             <span class="sep">━━━━━━━━━━━━━━━━━━</span>
             Thank you for your order!<br><br>
             <strong>Order #a3f7c2d1</strong><br>
-            &nbsp;&nbsp;1× Wireless Headphones<br>
-            &nbsp;&nbsp;2× USB-C Cable<br>
-            💰 Total: 12,450 sats<br>
-            ✨ Store credit: 5,000 sats
+            &nbsp;&nbsp;1x Wireless Headphones<br>
+            &nbsp;&nbsp;2x USB-C Cable<br>
+            Total: 12,450 sats<br>
+            Store credit: 5,000 sats
             <div class="msg-time">9:46</div>
           </div>
           <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">📦 My Orders</div></div>
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">My Orders</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">Open Shop</div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 7. Invoice Created -->
+    <!-- 3. Fulfillment Update -->
     <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">7</span>Invoice Created</div>
+      <div class="screen-label"><span class="screen-number">3</span>Fulfillment Update</div>
       <div class="chat-frame">
         <div class="chat-header">
           <div class="chat-avatar">⚡</div>
@@ -1934,137 +1917,21 @@ body::before {
         </div>
         <div class="chat-body">
           <div class="bot-msg">
-            ⚡ <strong>Invoice Created</strong>
-            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
-            <strong>Order #a3f7c2d1</strong><br>
-            💰 Total: <strong>12,450 sats</strong><br>
-            ✨ Store credit: -5,000 sats<br>
-            (~69.97 USD)<br><br>
-            ⏰ Expires in 15 minutes
-            <code>lnbc124500n1pjg7x0hpp5qe8v7tlm8kf3xdp82vjt4k9sn2g5tz9qxqyjw5qcqp2sp5...</code>
-            Copy and pay with any ⚡ Lightning wallet.
-            <div class="msg-time">9:46</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">⚡ Pay Now</div></div>
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 8. Return Item Selection -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">8</span>Return Selection</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="bot-msg">
-            ↩️ <strong>Return Request</strong><br>
-            Order #a3f7c2d1<br><br>
-            Select items to return:
-            <div class="msg-time">9:47</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">☑ Wireless Headphones (1×)</div></div>
-            <div class="inline-kb-row"><div class="inline-kb-btn">☐ USB-C Cable (2×)</div></div>
-            <div class="inline-kb-row">
-              <div class="inline-kb-btn">✅ Confirm</div>
-              <div class="inline-kb-btn">❌ Cancel</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 9. Return Submitted -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">9</span>Return Submitted</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="bot-msg">
-            ↩️ <strong>Return Requested</strong>
-            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
-            Your return request has been submitted.<br><br>
-            Items: 1× Wireless Headphones<br>
-            💰 Refund amount: 8,500 sats<br><br>
-            We'll review your request shortly.
-            <div class="msg-time">9:48</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍 Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 10. Refund Prompt -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">10</span>Refund Prompt</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="bot-msg">
-            ✅ <strong>Return Approved!</strong>
-            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
-            Your refund of <strong>8,500 sats</strong> is ready to be sent.<br><br>
-            Please send one of the following:<br>
-            - A ⚡ <strong>Lightning invoice</strong> for 8,500 sats<br>
-            - Your ⚡ <strong>Lightning address</strong> (e.g. you@wallet.com)<br><br>
-            Paste it below:
-            <div class="msg-time">9:49</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">❌ Cancel</div></div>
-          </div>
-          <div class="user-msg" style="margin-top:6px">user@getalby.com<div class="msg-time">9:49</div></div>
-          <div class="bot-msg">
-            ✅ <strong>Refund Sent!</strong><br><br>
-            Your refund has been processed successfully.
-            <div class="msg-time">9:49</div>
-          </div>
-          <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">🛍  Open Shop</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 11. Fulfillment Update -->
-    <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">11</span>Fulfillment Update</div>
-      <div class="chat-frame">
-        <div class="chat-header">
-          <div class="chat-avatar">⚡</div>
-          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
-        </div>
-        <div class="chat-body">
-          <div class="bot-msg">
-            📦 <strong>Order Update</strong><br><br>
-            Order #a3f7c2d1 → <strong>🚚 Shipping</strong><br><br>
-            📝 Tracking: LN-2024-XYZ-789. Estimated delivery in 3-5 business days.
+            <strong>Order Update</strong><br><br>
+            Order #a3f7c2d1 — <strong>Shipping</strong><br><br>
+            Tracking: LN-2024-XYZ-789. Estimated delivery in 3-5 business days.
             <div class="msg-time">10:15</div>
           </div>
           <div class="inline-kb">
-            <div class="inline-kb-row"><div class="inline-kb-btn">📦 View Orders</div></div>
+            <div class="inline-kb-row"><div class="inline-kb-btn">View Orders</div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 12. Admin Reply -->
+    <!-- 4. Admin Reply -->
     <div class="chat-slot">
-      <div class="screen-label"><span class="screen-number">12</span>Admin Reply</div>
+      <div class="screen-label"><span class="screen-number">4</span>Admin Reply</div>
       <div class="chat-frame">
         <div class="chat-header">
           <div class="chat-avatar">⚡</div>
@@ -2072,15 +1939,63 @@ body::before {
         </div>
         <div class="chat-body">
           <div class="bot-msg">
-            💬 <strong>Message from Shop</strong><br><br>
-            📦 Regarding Order #a3f7c2d1<br><br>
+            <strong>Message from Shop</strong><br><br>
+            Regarding Order #a3f7c2d1<br><br>
             "Your order has been shipped! Tracking number: LN-2024-XYZ. Let us know if you need anything."
             <div class="msg-time">10:20</div>
           </div>
           <div class="inline-kb">
             <div class="inline-kb-row">
-              <div class="inline-kb-btn">💬 Reply</div>
-              <div class="inline-kb-btn">🛍 Shop</div>
+              <div class="inline-kb-btn">Messages</div>
+              <div class="inline-kb-btn">Shop</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Return Approved -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">5</span>Return Approved</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            <strong>Return Approved</strong>
+            <span class="sep">━━━━━━━━━━━━━━━━━━</span>
+            Your refund of <strong>8,500 sats</strong> has been approved.<br><br>
+            Please open Messages in the shop and send us your Lightning address or invoice so we can process your refund.
+            <div class="msg-time">9:49</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row"><div class="inline-kb-btn">Messages</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Return Denied -->
+    <div class="chat-slot">
+      <div class="screen-label"><span class="screen-number">6</span>Return Denied</div>
+      <div class="chat-frame">
+        <div class="chat-header">
+          <div class="chat-avatar">⚡</div>
+          <div class="chat-header-info"><h4>Lightning Store</h4><p>bot</p></div>
+        </div>
+        <div class="chat-body">
+          <div class="bot-msg">
+            <strong>Return Not Approved</strong><br><br>
+            Reason: "Item shows signs of use beyond normal testing. Please contact us if you'd like to discuss further."<br><br>
+            If you have questions, reach us via Messages.
+            <div class="msg-time">10:30</div>
+          </div>
+          <div class="inline-kb">
+            <div class="inline-kb-row">
+              <div class="inline-kb-btn">Messages</div>
+              <div class="inline-kb-btn">Shop</div>
             </div>
           </div>
         </div>
@@ -2088,6 +2003,39 @@ body::before {
     </div>
 
   </div>
+
+  <!-- Deep Links & Inline Mode -->
+  <div class="feature-cards">
+    <div class="feature-card">
+      <div class="feature-card-icon">🔗</div>
+      <h4>Deep Links</h4>
+      <p>Link directly to any product. The "Open Shop" button opens the Mini App on that product's page. Use for QR codes, social media, pinned messages.</p>
+      <div class="feature-card-code">https://t.me/yourbotname?start=product_PRODUCT_ID</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-card-icon">🔍</div>
+      <h4>Inline Mode</h4>
+      <p>Customers share products in any Telegram chat. Type the bot name + a search term to get rich product cards with images and prices.</p>
+      <div class="feature-card-code" style="margin-bottom:12px">@yourbotname pizza</div>
+      <div class="inline-preview">
+        <div class="inline-preview-row">
+          <div class="inline-preview-thumb" style="background:linear-gradient(135deg,#3a2a1a,#2d1a0d)">🍕</div>
+          <div class="inline-preview-info">
+            <div class="inline-preview-title">Margherita Pizza</div>
+            <div class="inline-preview-price">12.99 USD</div>
+          </div>
+        </div>
+        <div class="inline-preview-row">
+          <div class="inline-preview-thumb" style="background:linear-gradient(135deg,#3a1a1a,#2d0d0d)">🍕</div>
+          <div class="inline-preview-info">
+            <div class="inline-preview-title">Pepperoni Pizza</div>
+            <div class="inline-preview-price">14.99 USD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 <!-- FOOTER -->

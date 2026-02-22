@@ -18,6 +18,7 @@ from .crud import (
     get_stale_carts,
     has_commercial_been_sent,
     log_commercial_send,
+    update_commercial_stock_snapshot,
     update_order_status,
 )
 from .models import Commercial, Customer, Shop
@@ -51,6 +52,10 @@ class BotManager:
                 self._poll_tasks[shop.id] = task
         except Exception as e:
             logger.error(f"Failed to start bot for shop '{shop.title}': {e}")
+            try:
+                await bot.stop()
+            except Exception:
+                pass
             del self.bots[shop.id]
 
     async def stop_bot(self, shop_id: str) -> None:
@@ -199,6 +204,7 @@ async def build_commercial_message(
     customer: Customer,
     shop: Shop,
     bot: Optional[TelegramBot] = None,
+    restocked_products: Optional[List] = None,
 ) -> Tuple[str, str]:
     """Build a rich, type-specific message for a commercial.
 
@@ -258,22 +264,17 @@ async def build_commercial_message(
     elif commercial.type == "back_in_stock":
         # Show which products are back
         product_names = ""
-        if bot:
-            active = bot.get_active_products()
-            restocked = [
-                p for p in active
-                if p.inventory is not None and p.inventory > 0
-            ]
-            if restocked:
-                top = restocked[:5]
-                product_names = (
-                    "\n\n<b>Now available:</b>\n"
-                    + "\n".join(f"  • {p.title}" for p in top)
+        show_products = restocked_products or []
+        if show_products:
+            top = show_products[:5]
+            product_names = (
+                "\n\n<b>Now available:</b>\n"
+                + "\n".join(f"  • {p.title}" for p in top)
+            )
+            if len(show_products) > 5:
+                product_names += (
+                    f"\n  … and {len(show_products) - 5} more"
                 )
-                if len(restocked) > 5:
-                    product_names += (
-                        f"\n  … and {len(restocked) - 5} more"
-                    )
 
         body = f"Good news, {name}! Items are back in stock."
         if commercial.content:
@@ -325,10 +326,13 @@ async def send_commercial_to_customer(
     commercial: Commercial,
     customer: Customer,
     tma_base_url: str,
+    order_id: Optional[str] = None,
+    restocked_products: Optional[List] = None,
 ) -> None:
     """Send a commercial message and log it (Telegram + TMA messages)."""
     telegram_html, plain_text = await build_commercial_message(
-        commercial, customer, shop, bot
+        commercial, customer, shop, bot,
+        restocked_products=restocked_products,
     )
     keyboard = build_commercial_keyboard(commercial, tma_base_url)
 
@@ -355,7 +359,9 @@ async def send_commercial_to_customer(
         username=None,
     )
 
-    await log_commercial_send(commercial.id, shop.id, customer.chat_id)
+    await log_commercial_send(
+        commercial.id, shop.id, customer.chat_id, order_id=order_id
+    )
 
 
 async def run_commercial_engine() -> None:
@@ -389,6 +395,7 @@ async def run_commercial_engine() -> None:
                 for commercial in enabled:
                     try:
                         targets: List[Customer] = []
+                        restocked_products: Optional[List] = None
 
                         if commercial.type == "abandoned_cart":
                             stale = await get_stale_carts(
@@ -401,6 +408,7 @@ async def run_commercial_engine() -> None:
                             ]
 
                         elif commercial.type == "post_purchase":
+                            # Dedup per delivered order, not per customer
                             orders = await get_orders(
                                 shop.id, status="paid", limit=200
                             )
@@ -408,26 +416,77 @@ async def run_commercial_engine() -> None:
                                 o for o in orders
                                 if o.fulfillment_status == "delivered"
                             ]
-                            delivered_chat_ids = {
-                                o.telegram_chat_id for o in delivered
+                            # Build customer lookup
+                            cust_by_chat = {
+                                c.chat_id: c for c in customers
                             }
-                            targets = [
-                                c for c in customers
-                                if c.chat_id in delivered_chat_ids
-                            ]
+                            for order in delivered:
+                                cust = cust_by_chat.get(
+                                    order.telegram_chat_id
+                                )
+                                if not cust:
+                                    continue
+                                already = await has_commercial_been_sent(
+                                    commercial.id, cust.chat_id,
+                                    order_id=order.id,
+                                )
+                                if already:
+                                    continue
+                                try:
+                                    await send_commercial_to_customer(
+                                        bot, shop, commercial,
+                                        cust, tma_base_url,
+                                        order_id=order.id,
+                                    )
+                                    await asyncio.sleep(1 / 30)
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Commercial send failed for "
+                                        f"{cust.chat_id}: {e}"
+                                    )
+                            continue  # skip generic loop below
 
                         elif commercial.type == "promotion":
                             # Promotions are sent via manual broadcast only
                             continue
 
                         elif commercial.type == "back_in_stock":
+                            # Track 0 → >0 transitions
                             active = bot.get_active_products()
-                            has_restocked = any(
-                                p.inventory is not None and p.inventory > 0
+                            current_stock = {
+                                p.id: (p.inventory or 0)
                                 for p in active
+                            }
+                            prev_stock: dict = {}
+                            if commercial.last_known_stock:
+                                try:
+                                    prev_stock = json.loads(
+                                        commercial.last_known_stock
+                                    )
+                                except (json.JSONDecodeError, TypeError):
+                                    pass
+
+                            # Find products that went from 0 → >0
+                            restocked_ids = [
+                                pid for pid, qty in current_stock.items()
+                                if qty > 0
+                                and prev_stock.get(pid, 0) == 0
+                            ]
+                            restocked_products = [
+                                p for p in active
+                                if p.id in restocked_ids
+                            ]
+
+                            # Always save current snapshot
+                            await update_commercial_stock_snapshot(
+                                commercial.id,
+                                json.dumps(current_stock),
                             )
-                            if has_restocked:
+
+                            if restocked_products:
                                 targets = customers
+                            else:
+                                continue  # no transitions
 
                         for customer in targets:
                             already = await has_commercial_been_sent(
@@ -439,6 +498,11 @@ async def run_commercial_engine() -> None:
                                 await send_commercial_to_customer(
                                     bot, shop, commercial,
                                     customer, tma_base_url,
+                                    restocked_products=(
+                                        restocked_products
+                                        if commercial.type == "back_in_stock"
+                                        else None
+                                    ),
                                 )
                                 await asyncio.sleep(1 / 30)
                             except Exception as e:

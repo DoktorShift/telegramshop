@@ -194,3 +194,14 @@ async def m004_webhook_secret(db: Database):
     await db.execute(
         "ALTER TABLE telegramshop.shops ADD COLUMN webhook_secret TEXT"
     )
+
+
+async def m005_commercial_dedup(db: Database):
+    """Add order_id to commercial_logs for per-order dedup,
+    and last_known_stock to commercials for back-in-stock tracking."""
+    await db.execute(
+        "ALTER TABLE telegramshop.commercial_logs ADD COLUMN order_id TEXT"
+    )
+    await db.execute(
+        "ALTER TABLE telegramshop.commercials ADD COLUMN last_known_stock TEXT"
+    )

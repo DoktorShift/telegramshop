@@ -267,11 +267,6 @@ async def api_update_fulfillment(
         raise HTTPException(
             HTTPStatus.BAD_REQUEST, "Order tracking not enabled for this shop"
         )
-    if not order.has_physical_items:
-        raise HTTPException(
-            HTTPStatus.BAD_REQUEST,
-            "Fulfillment tracking only applies to physical orders",
-        )
     if order.status != "paid":
         raise HTTPException(
             HTTPStatus.BAD_REQUEST, "Can only track fulfillment for paid orders"

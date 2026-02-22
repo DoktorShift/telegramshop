@@ -8,7 +8,7 @@ Real scenarios where this extension fits. For setup and feature details, see [RE
 
 You sell stickers, prints, or handmade goods. You don't want to maintain a website or pay platform fees.
 
-Set up your catalog in the Inventory extension, create a Telegram bot, and share the link. Customers browse in the Mini App or through bot commands, pay with Lightning, and you get notified in your admin chat. Ship the order, update the status, and the customer gets a delivery notification in Telegram.
+Set up your catalog in the Inventory extension, create a Telegram bot, and share the link. Customers tap **Open Shop** and browse the full Mini App storefront, pay with Lightning, and you get notified in your admin chat. Ship the order, update the status, and the customer gets a delivery notification with a link back to their orders.
 
 Use checkout mode `address` to collect shipping info. Set a flat shipping rate or a free-shipping threshold to encourage larger orders.
 
@@ -16,19 +16,19 @@ Use checkout mode `address` to collect shipping info. Set a flat shipping rate o
 
 You sell e-books, templates, presets, or access codes. No shipping, no address needed.
 
-Set checkout mode to `none` or `email`. Shipping stays at zero. Customers pay and you fulfill by sending a message through the bot or by email with their download.
+Set checkout mode to `none` or `email`. Shipping stays at zero. Customers pay and you fulfill by sending a message through the admin panel or by email with their download.
 
 ## Pop-up or event sales
 
 You're at a market, conference, or meetup. You want people to order and pay without standing in line.
 
-Share a QR code or deep link (`t.me/yourbot?start=product_<id>`) to a specific product. Customers scan, open the Mini App, tap, pay. You see orders roll in. Works well for pre-orders too — set up products before the event and take orders in advance.
+Share a QR code or deep link (`t.me/yourbot?start=open`) to the shop. Customers scan, open the Mini App, browse, tap, pay. You see orders roll in. Works well for pre-orders too — set up products before the event and take orders in advance.
 
 ## Community merch store
 
 Your Telegram group wants to sell branded merchandise. Drop the bot into the group or share it in the channel description.
 
-Members browse the Mini App catalog, pick sizes/variants (use categories or tags in Inventory), and pay. You handle fulfillment when enough orders come in. Store credit refunds work well here — if something is out of stock, credit the customer and they spend it on the next drop.
+Members open the Mini App, browse the catalog, pick sizes/variants (use categories or tags in Inventory), and pay. You handle fulfillment when enough orders come in. Store credit refunds work well here — if something is out of stock, credit the customer and they spend it on the next drop.
 
 ## Restaurant or cafe takeaway
 

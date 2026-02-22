@@ -2,8 +2,6 @@ import hashlib
 import re
 import time
 from collections import defaultdict
-from typing import Optional
-
 from fastapi import HTTPException
 
 
@@ -59,25 +57,3 @@ def escape_html(text: str) -> str:
     )
 
 
-def format_address(
-    name: str,
-    street: str,
-    street2: Optional[str],
-    po_box: Optional[str],
-    city: str,
-    state: Optional[str],
-    zip_code: str,
-    country: str,
-) -> str:
-    lines = [name, street]
-    if street2:
-        lines.append(street2)
-    if po_box:
-        lines.append(f"PO Box {po_box}")
-    city_line = city
-    if state:
-        city_line += f", {state}"
-    city_line += f" {zip_code}"
-    lines.append(city_line)
-    lines.append(country)
-    return "\n".join(lines)

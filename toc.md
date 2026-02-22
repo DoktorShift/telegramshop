@@ -14,7 +14,7 @@
 
 5. **Shipping**: Shipping costs are configured by the merchant. The extension calculates costs but does not handle physical fulfillment. Merchants are responsible for shipping their products.
 
-6. **Returns and Refunds**: Refund policies are determined by the merchant. The extension supports Lightning refunds, Lightning address refunds, and store credit. Partial refunds are available for restocking fees.
+6. **Returns and Refunds**: Refund policies are determined by the merchant. The extension supports store credit refunds and Lightning refunds (coordinated via the messaging system). Partial refunds are available for restocking fees.
 
 7. **Order Management**: Merchants are responsible for fulfilling orders and updating order status. The extension provides tracking tools but does not guarantee delivery.
 

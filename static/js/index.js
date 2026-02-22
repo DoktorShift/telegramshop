@@ -783,7 +783,7 @@ window.app = Vue.createApp({
 
     // --- Orders ---
     canTrackFulfillment(order) {
-      if (order.status !== 'paid' || !order.has_physical_items) {
+      if (order.status !== 'paid') {
         return false
       }
       const shop = this.shops.find(s => s.id === order.shop_id)

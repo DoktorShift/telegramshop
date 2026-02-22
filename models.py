@@ -19,20 +19,6 @@ class CommercialType(str, Enum):
 
 class UserState(str, Enum):
     BROWSING = "browsing"
-    WAITING_QUANTITY = "waiting_quantity"
-    WAITING_EMAIL = "waiting_email"
-    WAITING_NAME = "waiting_name"
-    WAITING_STREET = "waiting_street"
-    WAITING_STREET2 = "waiting_street2"
-    WAITING_POBOX = "waiting_pobox"
-    WAITING_CITY = "waiting_city"
-    WAITING_STATE = "waiting_state"
-    WAITING_ZIP = "waiting_zip"
-    WAITING_COUNTRY = "waiting_country"
-    WAITING_MESSAGE = "waiting_message"
-    WAITING_RETURN_ITEMS = "waiting_return_items"
-    WAITING_RETURN_REASON = "waiting_return_reason"
-    WAITING_REFUND_INVOICE = "waiting_refund_invoice"
 
 
 class FulfillmentStatus(str, Enum):
@@ -215,22 +201,6 @@ class UserSession:
         self.state: UserState = UserState.BROWSING
         self.cart: List[CartItem] = []
         self.username: Optional[str] = None
-        self.pending_product_id: Optional[str] = None
-        self.buyer_email: Optional[str] = None
-        self.buyer_name: Optional[str] = None
-        self.buyer_street: Optional[str] = None
-        self.buyer_street2: Optional[str] = None
-        self.buyer_po_box: Optional[str] = None
-        self.buyer_city: Optional[str] = None
-        self.buyer_state: Optional[str] = None
-        self.buyer_zip: Optional[str] = None
-        self.buyer_country: Optional[str] = None
-        self.browse_category: str = "all"
-        self.browse_index: int = 0
-        self.browse_message_id: Optional[int] = None
-        self.pending_order_id: Optional[str] = None
-        self.pending_return_items: Optional[List[str]] = None
-        self.pending_refund_sats: int = 0
 
 
 # --- API Request Models ---
@@ -307,6 +277,7 @@ class Commercial(BaseModel):
     image_url: Optional[str] = None
     is_enabled: bool = True
     delay_minutes: int = 60
+    last_known_stock: Optional[str] = None
     created_at: str
 
 
@@ -315,6 +286,7 @@ class CommercialLog(BaseModel):
     commercial_id: str
     shop_id: str
     chat_id: int
+    order_id: Optional[str] = None
     sent_at: str
 
 
@@ -334,6 +306,7 @@ class TmaAuthResponse(BaseModel):
     checkout_mode: str
     allow_returns: bool
     welcome_text: Optional[str] = None
+    bot_username: Optional[str] = None
 
 
 class TmaCartUpdate(BaseModel):

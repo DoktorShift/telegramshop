@@ -788,14 +788,16 @@ async def get_customers(shop_id: str) -> list[Customer]:
 
 
 async def get_stale_carts(shop_id: str, older_than_minutes: int = 60) -> list[Cart]:
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)
+    ).strftime("%Y-%m-%d %H:%M:%S")
     rows = await db.fetchall(
         """SELECT * FROM telegramshop.carts
            WHERE shop_id = :shop_id
-           AND updated_at < datetime('now', :interval)""",
-        {
-            "shop_id": shop_id,
-            "interval": f"-{older_than_minutes} minutes",
-        },
+           AND updated_at < :cutoff""",
+        {"shop_id": shop_id, "cutoff": cutoff},
     )
     return [Cart(**dict(row)) for row in rows]
 
@@ -941,32 +943,62 @@ async def delete_commercial(commercial_id: str) -> None:
 
 
 async def log_commercial_send(
-    commercial_id: str, shop_id: str, chat_id: int
+    commercial_id: str,
+    shop_id: str,
+    chat_id: int,
+    order_id: Optional[str] = None,
 ) -> None:
     log_id = urlsafe_short_hash()
     await db.execute(
         """INSERT INTO telegramshop.commercial_logs
-           (id, commercial_id, shop_id, chat_id)
-           VALUES (:id, :commercial_id, :shop_id, :chat_id)""",
+           (id, commercial_id, shop_id, chat_id, order_id)
+           VALUES (:id, :commercial_id, :shop_id, :chat_id, :order_id)""",
         {
             "id": log_id,
             "commercial_id": commercial_id,
             "shop_id": shop_id,
             "chat_id": chat_id,
+            "order_id": order_id,
         },
     )
 
 
 async def has_commercial_been_sent(
-    commercial_id: str, chat_id: int
+    commercial_id: str,
+    chat_id: int,
+    order_id: Optional[str] = None,
 ) -> bool:
-    row = await db.fetchone(
-        """SELECT id FROM telegramshop.commercial_logs
-           WHERE commercial_id = :commercial_id AND chat_id = :chat_id
-           LIMIT 1""",
-        {"commercial_id": commercial_id, "chat_id": chat_id},
-    )
+    if order_id:
+        row = await db.fetchone(
+            """SELECT id FROM telegramshop.commercial_logs
+               WHERE commercial_id = :commercial_id
+               AND chat_id = :chat_id AND order_id = :order_id
+               LIMIT 1""",
+            {
+                "commercial_id": commercial_id,
+                "chat_id": chat_id,
+                "order_id": order_id,
+            },
+        )
+    else:
+        row = await db.fetchone(
+            """SELECT id FROM telegramshop.commercial_logs
+               WHERE commercial_id = :commercial_id AND chat_id = :chat_id
+               LIMIT 1""",
+            {"commercial_id": commercial_id, "chat_id": chat_id},
+        )
     return row is not None
+
+
+async def update_commercial_stock_snapshot(
+    commercial_id: str, snapshot_json: str
+) -> None:
+    await db.execute(
+        """UPDATE telegramshop.commercials
+           SET last_known_stock = :snapshot
+           WHERE id = :id""",
+        {"id": commercial_id, "snapshot": snapshot_json},
+    )
 
 
 async def get_commercial_logs(

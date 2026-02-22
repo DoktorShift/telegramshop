@@ -2,7 +2,7 @@
 
 A [LNbits](https://lnbits.com) extension that turns a Telegram bot into a Lightning-powered shop.
 
-Customers browse your catalog, fill a cart, and pay — all without leaving Telegram. They can use classic bot commands or a full **Telegram Mini App** with a native-feeling storefront UI. You manage orders, messages, returns, and marketing from the LNbits dashboard.
+Customers open a **Telegram Mini App** — a native-feeling storefront embedded right inside the chat — to browse products, fill a cart, and pay with Lightning. You manage orders, messages, returns, and marketing from the LNbits dashboard.
 
 Products live in the [Inventory](https://github.com/lnbits/inventory) extension. One catalog, multiple sales channels.
 
@@ -10,11 +10,13 @@ Products live in the [Inventory](https://github.com/lnbits/inventory) extension.
 
 ## Features
 
-**Storefront**
+**Storefront (Telegram Mini App)**
+- Full web storefront embedded inside Telegram — no browser, no app install
 - Product browsing by category with images, descriptions, and stock levels
-- Persistent shopping cart with quantity controls
-- Two interfaces: bot commands (inline keyboards) and Telegram Mini App (embedded web UI)
-- Deep links to individual products — great for QR codes and social sharing
+- Persistent shopping cart with quantity controls (synced server-side)
+- Checkout with buyer info collection, Lightning invoice, and store credit
+- Order history, returns, credits, and messaging — all in-app
+- Inline product sharing across any Telegram chat
 
 **Payments**
 - Lightning invoices generated at checkout
@@ -24,16 +26,16 @@ Products live in the [Inventory](https://github.com/lnbits/inventory) extension.
 
 **Order management**
 - Fulfillment tracking: preparing → shipping → delivered
-- Customer notifications at each status change
+- Customer notifications at each status change (via Telegram with deep links back to the Mini App)
 - Buyer info collection: none, email-only, or full shipping address
 
 **Customer communication**
-- Bidirectional messaging through the bot
+- Bidirectional messaging through the Mini App
 - Conversations threaded by customer and order
 - Unread message filtering in the admin panel
 
 **Returns & refunds**
-- Customer-initiated returns from order history
+- Customer-initiated returns from order history in the Mini App
 - Approve with Lightning refund or store credit (full or partial)
 - Deny with a written reason
 - Configurable return window (default: 30 days)
@@ -65,15 +67,35 @@ Products live in the [Inventory](https://github.com/lnbits/inventory) extension.
 
 ## Bot commands
 
-Registered in Telegram's command menu:
+The bot registers a single command. All customer interaction happens in the Mini App.
 
 | Command | Description |
 |---------|-------------|
-| `/start` | Welcome screen — opens the Mini App |
-| `/orders` | Order history with return option |
-| `/credits` | Store credit balance |
-| `/message` | Send a message to the shop |
-| `/help` | How to shop |
+| `/start` | Welcome message with an "Open Shop" button that launches the Mini App |
+
+---
+
+## Deep links
+
+Link directly to a product — the "Open Shop" button opens the Mini App on that product's page:
+
+```
+https://t.me/yourbotname?start=product_PRODUCT_ID
+```
+
+Use these for QR codes at events, social media posts, pinned group messages, or anywhere you want one-tap access to a specific product.
+
+---
+
+## Inline mode
+
+Customers can share products in any Telegram chat. Type `@yourbotname` followed by a search term — the bot suggests matching products as rich inline results with images and prices. Tapping a result posts it into the chat with an "Open Shop" button.
+
+```
+@yourbotname pizza
+```
+
+Great for word-of-mouth: customers share products with friends without leaving their current conversation.
 
 ---
 
