@@ -81,9 +81,15 @@ const TMA = {
     await this.loadProducts()
     await this.loadCart()
 
-    // Deep link via startapp parameter (e.g. ?startapp=product_abc123)
+    // Determine initial route:
+    // 1. ?route= query param (from web_app button URLs)
+    // 2. startapp parameter (from t.me/?startapp= deep links)
+    // 3. Existing hash fragment (browser dev)
+    const initialRoute = params.get('route')
     const startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''
-    if (startParam.startsWith('product_') && !window.location.hash) {
+    if (initialRoute) {
+      window.location.hash = '#/' + initialRoute
+    } else if (startParam.startsWith('product_')) {
       window.location.hash = '#/product/' + startParam.slice(8)
     } else {
       this.route()

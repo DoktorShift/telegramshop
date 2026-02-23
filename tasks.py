@@ -212,27 +212,27 @@ async def cleanup_expired_orders() -> None:
 
 # --- Commercial message builder ---
 
-# Type-specific config: emoji, default CTA text, TMA deep-link fragment
+# Type-specific config: emoji, default CTA text, TMA route param
 _COMMERCIAL_META = {
     "abandoned_cart": {
         "emoji": "🛒",
         "cta": "Complete your order",
-        "fragment": "#/cart",
+        "route": "cart",
     },
     "post_purchase": {
         "emoji": "🎉",
         "cta": "Shop again",
-        "fragment": "#/",
+        "route": "",
     },
     "back_in_stock": {
         "emoji": "📦",
         "cta": "See what's new",
-        "fragment": "#/",
+        "route": "",
     },
     "promotion": {
         "emoji": "🎁",
         "cta": "Check it out",
-        "fragment": "#/",
+        "route": "",
     },
 }
 
@@ -348,10 +348,10 @@ def build_commercial_keyboard(
     meta = _COMMERCIAL_META.get(
         commercial.type, _COMMERCIAL_META["promotion"]
     )
-    fragment = meta["fragment"]
+    route = meta["route"]
     cta_text = meta["cta"]
 
-    tma_url = tma_base_url + fragment
+    tma_url = tma_base_url + (f"&route={route}" if route else "")
 
     return {"inline_keyboard": [
         [{"text": f"{meta['emoji']} {cta_text}", "web_app": {"url": tma_url}}]
