@@ -61,6 +61,7 @@ window.app = Vue.createApp({
         chatId: 0,
         orderId: null
       },
+      _threadPollTimer: null,
       fulfillmentDialog: {
         show: false,
         order: null,
@@ -73,10 +74,12 @@ window.app = Vue.createApp({
       replyText: '',
 
       // Inventory
-      inventoryOptions: [],
+      inventoryName: '',
       inventoryLoading: false,
       inventoryError: false,
       activeOmitTags: [],
+      availableTags: [],
+      tagsLoading: false,
 
       // Currencies
       currencies: [],
@@ -602,7 +605,15 @@ window.app = Vue.createApp({
     // --- Shop CRUD ---
     async openShopDialog(shop) {
       if (shop) {
-        this.shopDialog.data = {...shop}
+        const d = {...shop}
+        // Convert CSV tag strings to arrays for q-select
+        d.include_tags = d.include_tags
+          ? d.include_tags.split(',').map(t => t.trim()).filter(Boolean)
+          : []
+        d.omit_tags = d.omit_tags
+          ? d.omit_tags.split(',').map(t => t.trim()).filter(Boolean)
+          : []
+        this.shopDialog.data = d
         this.shopDialog.isEdit = true
         this.shopDialog.botUsername = null
         this.shopDialog.step = 1
@@ -626,7 +637,15 @@ window.app = Vue.createApp({
 
     async saveShop() {
       try {
-        const d = this.shopDialog.data
+        const d = {...this.shopDialog.data}
+        // Convert tag arrays to CSV strings for the API
+        d.include_tags = Array.isArray(d.include_tags)
+          ? d.include_tags.join(',') : (d.include_tags || '')
+        d.omit_tags = Array.isArray(d.omit_tags)
+          ? d.omit_tags.join(',') : (d.omit_tags || '')
+        // Send empty string as null
+        if (!d.include_tags) d.include_tags = null
+        if (!d.omit_tags) d.omit_tags = null
         if (this.shopDialog.isEdit) {
           const wallet = this.walletFor(d)
           await LNbits.api.request(
@@ -705,7 +724,7 @@ window.app = Vue.createApp({
         const wallet = this.currentWallet || this.g.user.wallets[0]
         if (!wallet) {
           console.error('[TelegramShop] No wallet available')
-          this.inventoryOptions = []
+          this.inventoryName = ''
           this.inventoryError = true
           this.inventoryLoading = false
           return
@@ -719,24 +738,44 @@ window.app = Vue.createApp({
         )
         console.log('[TelegramShop] Inventory response:', resp)
         const data = resp.data
-        this.inventoryOptions = (data || []).map(s => ({
-          label: s.name,
-          value: s.id
-        }))
-        if (data && data.length > 0 && data[0].omit_tags) {
-          this.activeOmitTags = data[0].omit_tags
-        }
-        if (!data || data.length === 0) {
+        if (data && data.length > 0) {
+          this.inventoryName = data[0].name || data[0].id
+          // Auto-set inventory_id (only one inventory per user)
+          if (!this.shopDialog.data.inventory_id) {
+            this.shopDialog.data.inventory_id = data[0].id
+          }
+          if (data[0].omit_tags) {
+            this.activeOmitTags = data[0].omit_tags
+          }
+        } else {
+          this.inventoryName = ''
           this.inventoryError = true
         }
       } catch (e) {
         console.error('[TelegramShop] Failed to load inventory:', e)
         console.error('[TelegramShop] Error response:',
           e.response?.status, e.response?.data)
-        this.inventoryOptions = []
+        this.inventoryName = ''
         this.inventoryError = true
       }
       this.inventoryLoading = false
+      // Fetch available tags from inventory items
+      this.tagsLoading = true
+      try {
+        const wallet = this.currentWallet || this.g.user.wallets[0]
+        if (wallet) {
+          const resp = await LNbits.api.request(
+            'GET',
+            '/telegramshop/api/v1/sources/inventory/tags',
+            wallet.inkey
+          )
+          this.availableTags = resp.data.tags || []
+        }
+      } catch (e) {
+        console.error('[TelegramShop] Failed to load tags:', e)
+        this.availableTags = []
+      }
+      this.tagsLoading = false
     },
 
     // --- Shop actions ---
@@ -869,8 +908,38 @@ window.app = Vue.createApp({
         this.threadDialog.chatId = chatId
         this.threadDialog.orderId = orderId
         this.threadDialog.show = true
+        this._startThreadPoll()
       } catch (e) {
         LNbits.utils.notifyApiError(e)
+      }
+    },
+
+    _startThreadPoll() {
+      this._stopThreadPoll()
+      this._threadPollTimer = setInterval(async () => {
+        if (!this.threadDialog.show) {
+          this._stopThreadPoll()
+          return
+        }
+        try {
+          const wallet = this._walletForShopId(this.threadDialog.shopId)
+          let url =
+            `/telegramshop/api/v1/message/thread?shop_id=${this.threadDialog.shopId}&chat_id=${this.threadDialog.chatId}`
+          if (this.threadDialog.orderId) url += `&order_id=${this.threadDialog.orderId}`
+          const {data} = await LNbits.api.request('GET', url, wallet.inkey)
+          if (data.length !== this.threadDialog.messages.length
+              || (data.length && data[data.length - 1].id
+                  !== this.threadDialog.messages[this.threadDialog.messages.length - 1].id)) {
+            this.threadDialog.messages = data
+          }
+        } catch { /* silent */ }
+      }, 5000)
+    },
+
+    _stopThreadPoll() {
+      if (this._threadPollTimer) {
+        clearInterval(this._threadPollTimer)
+        this._threadPollTimer = null
       }
     },
 
@@ -1264,7 +1333,9 @@ window.app = Vue.createApp({
         return_window_hours: 720,
         shipping_flat_rate: 0,
         shipping_free_threshold: 0,
-        shipping_per_kg: 0
+        shipping_per_kg: 0,
+        include_tags: [],
+        omit_tags: []
       }
     }
   },
@@ -1278,6 +1349,9 @@ window.app = Vue.createApp({
         this.loadCommercials()
         this.loadCustomers()
       }
+    },
+    'threadDialog.show'(open) {
+      if (!open) this._stopThreadPoll()
     },
     'ordersFilter.shop_id'() {
       this.loadOrders()
