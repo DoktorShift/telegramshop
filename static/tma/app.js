@@ -81,9 +81,15 @@ const TMA = {
     await this.loadProducts()
     await this.loadCart()
 
-    // Deep link via startapp parameter (e.g. ?startapp=product_abc123)
+    // Determine initial route:
+    // 1. ?route= query param (from web_app button URLs)
+    // 2. startapp parameter (from t.me/?startapp= deep links)
+    // 3. Existing hash fragment (browser dev)
+    const initialRoute = params.get('route')
     const startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''
-    if (startParam.startsWith('product_') && !window.location.hash) {
+    if (initialRoute) {
+      window.location.hash = '#/' + initialRoute
+    } else if (startParam.startsWith('product_')) {
       window.location.hash = '#/product/' + startParam.slice(8)
     } else {
       this.route()
@@ -352,8 +358,9 @@ const TMA = {
     const parts = hash.split('/')
     const route = parts[1] || ''
 
-    // Stop any active payment polling when navigating away
+    // Stop any active polling when navigating away
     this._stopPolling()
+    this._stopMessagesPoll()
 
     // Scroll to top on screen change
     window.scrollTo(0, 0)
@@ -447,6 +454,7 @@ const TMA = {
         this.showScreen('messages')
         this.renderMessages()
         this.setActiveTab('messages')
+        this._startMessagesPoll()
         break
       default:
         this.showScreen('home')
@@ -1413,6 +1421,35 @@ const TMA = {
       clearTimeout(this._pollTimer)
       this._pollTimer = null
     }
+  },
+
+  _msgPollTimer: null,
+  _msgPollHash: null,
+
+  _startMessagesPoll() {
+    this._stopMessagesPoll()
+    this._msgPollTimer = setInterval(async () => {
+      if (this.currentScreen !== 'messages') {
+        this._stopMessagesPoll()
+        return
+      }
+      try {
+        const msgs = await this.api('/' + this.shopId + '/messages')
+        const hash = msgs.length + ':' + (msgs.length ? msgs[msgs.length - 1].timestamp : '')
+        if (this._msgPollHash && this._msgPollHash !== hash) {
+          await this.renderMessages()
+        }
+        this._msgPollHash = hash
+      } catch { /* silent */ }
+    }, 5000)
+  },
+
+  _stopMessagesPoll() {
+    if (this._msgPollTimer) {
+      clearInterval(this._msgPollTimer)
+      this._msgPollTimer = null
+    }
+    this._msgPollHash = null
   },
 
   async pollPayment(orderId) {

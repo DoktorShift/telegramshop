@@ -289,18 +289,18 @@ class TelegramBot:
         if args and args.startswith("product_"):
             product_id = args[8:]
             if self.get_product_by_id(product_id):
-                tma_url = self.tma_url + f"#/product/{product_id}"
+                tma_url = self.tma_url + f"&route=product/{product_id}"
 
         buttons = [
             [{"text": "\U0001f6cd Browse Products", "web_app": {"url": tma_url}}],
             [
                 {
                     "text": "\U0001f4e6 My Orders",
-                    "web_app": {"url": self.tma_url + "#/orders"},
+                    "web_app": {"url": self.tma_url + "&route=orders"},
                 },
                 {
                     "text": "\U0001f4ac Messages",
-                    "web_app": {"url": self.tma_url + "#/messages"},
+                    "web_app": {"url": self.tma_url + "&route=messages"},
                 },
             ],
         ]
@@ -333,7 +333,7 @@ class TelegramBot:
                 [
                     {
                         "text": "📦 My Orders",
-                        "web_app": {"url": tma_url + "#/orders"},
+                        "web_app": {"url": tma_url + "&route=orders"},
                     },
                     {
                         "text": "🛍 Shop",
@@ -432,7 +432,7 @@ class TelegramBot:
                 [
                     {
                         "text": "💬 Messages",
-                        "web_app": {"url": tma_url + "#/messages"},
+                        "web_app": {"url": tma_url + "&route=messages"},
                     },
                     {
                         "text": "🛍 Shop",
@@ -471,7 +471,7 @@ class TelegramBot:
             reply_markup=self._inline_keyboard(
                 [[{
                     "text": "💬 Send Invoice",
-                    "web_app": {"url": tma_url + "#/messages"},
+                    "web_app": {"url": tma_url + "&route=messages"},
                 }]]
             ),
         )
@@ -490,7 +490,7 @@ class TelegramBot:
                     [
                         {
                             "text": "💬 Messages",
-                            "web_app": {"url": tma_url + "#/messages"},
+                            "web_app": {"url": tma_url + "&route=messages"},
                         },
                         {
                             "text": "🛍 Shop",
@@ -520,7 +520,7 @@ class TelegramBot:
         keyboard = self._inline_keyboard(
             [[{
                 "text": "📦 View Order",
-                "web_app": {"url": tma_url + f"#/order/{order.id}"},
+                "web_app": {"url": tma_url + f"&route=order/{order.id}"},
             }]]
         )
         await self.send_message(chat_id, text, reply_markup=keyboard)
