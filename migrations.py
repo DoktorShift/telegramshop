@@ -205,3 +205,19 @@ async def m005_commercial_dedup(db: Database):
     await db.execute(
         "ALTER TABLE telegramshop.commercials ADD COLUMN last_known_stock TEXT"
     )
+
+
+async def m006_shop_tags(db: Database):
+    """Add per-shop include_tags and omit_tags for product filtering."""
+    for col in ("include_tags", "omit_tags"):
+        await db.execute(
+            f"ALTER TABLE telegramshop.shops ADD COLUMN {col} TEXT"
+        )
+
+
+async def m007_order_credit_used(db: Database):
+    """Track credit used per order for safe reservation/rollback."""
+    await db.execute(
+        "ALTER TABLE telegramshop.orders "
+        "ADD COLUMN credit_used INTEGER NOT NULL DEFAULT 0"
+    )

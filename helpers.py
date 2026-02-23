@@ -28,6 +28,8 @@ class RateLimiter:
 # Shared limiters
 webhook_limiter = RateLimiter(max_requests=60, window_seconds=60)
 tma_auth_limiter = RateLimiter(max_requests=10, window_seconds=60)
+tma_api_limiter = RateLimiter(max_requests=30, window_seconds=60)
+tma_checkout_limiter = RateLimiter(max_requests=5, window_seconds=60)
 
 
 def validate_email(email: str) -> bool:

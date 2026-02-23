@@ -19,14 +19,14 @@ from lnbits.core.services import create_invoice
 from lnbits.helpers import urlsafe_short_hash
 from lnbits.settings import settings
 
-from .helpers import tma_auth_limiter
+from .helpers import tma_auth_limiter, tma_api_limiter, tma_checkout_limiter
 
 from .crud import (
     delete_cart,
     get_cart,
     get_order,
     get_orders_by_chat,
-    get_returns,
+    get_returns_by_chat,
     get_shop,
     get_total_available_credit,
     create_message,
@@ -34,6 +34,7 @@ from .crud import (
     create_return,
     get_active_return_for_order,
     get_message_thread,
+    restore_credits,
     update_order_status,
     upsert_cart,
     upsert_customer,
@@ -63,10 +64,25 @@ from .tma_auth import validate_init_data
 tma_api_router = APIRouter(prefix="/api/v1/tma")
 
 
-# --- Auth helpers ---
+# --- Helpers ---
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 async def _get_shop_or_404(shop_id: str) -> Shop:
+    """Get shop, check existence AND enabled status."""
+    shop = await get_shop(shop_id)
+    if not shop:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Shop not found")
+    if not shop.is_enabled:
+        raise HTTPException(HTTPStatus.FORBIDDEN, "Shop is currently unavailable")
+    return shop
+
+
+async def _get_shop_or_404_public(shop_id: str) -> Shop:
+    """Get shop, check existence only (for public browsing endpoints)."""
     shop = await get_shop(shop_id)
     if not shop:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Shop not found")
@@ -92,8 +108,7 @@ def _extract_tma_user(
 @tma_api_router.post("/auth")
 async def tma_auth(data: TmaAuthRequest, request: Request):
     """Validate initData, return session info + shop config."""
-    client_ip = request.client.host if request.client else "unknown"
-    tma_auth_limiter.check(client_ip)
+    tma_auth_limiter.check(_client_ip(request))
     shop = await _get_shop_or_404(data.shop_id)
     user = validate_init_data(data.init_data, shop.bot_token)
     if not user:
@@ -125,7 +140,7 @@ async def tma_auth(data: TmaAuthRequest, request: Request):
 @tma_api_router.get("/{shop_id}/products")
 async def tma_get_products(shop_id: str):
     """Public product catalog."""
-    shop = await _get_shop_or_404(shop_id)
+    shop = await _get_shop_or_404_public(shop_id)
 
     # Try to get products from running bot first (cached)
     bot = bot_manager.get_bot(shop_id)
@@ -138,7 +153,10 @@ async def tma_get_products(shop_id: str):
         wallet = await get_wallet(shop.wallet)
         if not wallet:
             raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Wallet not found")
-        products = await fetch_inventory_products(shop.inventory_id, wallet.user)
+        products = await fetch_inventory_products(
+            shop.inventory_id, wallet.user,
+            include_tags=shop.include_tags, omit_tags=shop.omit_tags,
+        )
         products = [p for p in products if not p.disabled]
 
     result = []
@@ -164,7 +182,7 @@ async def tma_get_products(shop_id: str):
 @tma_api_router.get("/{shop_id}/products/{product_id}")
 async def tma_get_product(shop_id: str, product_id: str):
     """Single product detail."""
-    shop = await _get_shop_or_404(shop_id)
+    shop = await _get_shop_or_404_public(shop_id)
 
     bot = bot_manager.get_bot(shop_id)
     if bot:
@@ -175,7 +193,10 @@ async def tma_get_product(shop_id: str, product_id: str):
         wallet = await get_wallet(shop.wallet)
         if not wallet:
             raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Wallet not found")
-        products = await fetch_inventory_products(shop.inventory_id, wallet.user)
+        products = await fetch_inventory_products(
+            shop.inventory_id, wallet.user,
+            include_tags=shop.include_tags, omit_tags=shop.omit_tags,
+        )
         product = next((p for p in products if p.id == product_id), None)
 
     if not product:
@@ -205,11 +226,14 @@ async def tma_get_product(shop_id: str, product_id: str):
 
 @tma_api_router.get("/{shop_id}/cart")
 async def tma_get_cart(
-    shop_id: str, authorization: Optional[str] = Header(None)
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Get persisted cart for authenticated user."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
     cart = await get_cart(shop_id, user.chat_id)
     if not cart:
         return {"items": []}
@@ -225,10 +249,12 @@ async def tma_update_cart(
     shop_id: str,
     data: TmaCartUpdate,
     authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Update cart (validated against stock)."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
 
     # Validate items against current stock
     bot = bot_manager.get_bot(shop_id)
@@ -259,11 +285,14 @@ async def tma_update_cart(
 
 @tma_api_router.delete("/{shop_id}/cart")
 async def tma_clear_cart(
-    shop_id: str, authorization: Optional[str] = Header(None)
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Clear cart."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
     await delete_cart(shop_id, user.chat_id)
     return {"success": True}
 
@@ -276,10 +305,12 @@ async def tma_checkout(
     shop_id: str,
     data: TmaCheckoutRequest,
     authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Create order + invoice, return bolt11."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_checkout_limiter.check(_client_ip(request))
 
     # Load cart from DB
     cart_record = await get_cart(shop_id, user.chat_id)
@@ -311,7 +342,7 @@ async def tma_checkout(
     total_sats = await to_sats(total, shop.currency)
     has_physical = cart_has_physical_items(cart_items, products)
 
-    # Apply store credit
+    # Apply store credit (reservation)
     credit_used = 0
     available_credit = await get_total_available_credit(shop_id, user.chat_id)
     if available_credit > 0:
@@ -322,7 +353,7 @@ async def tma_checkout(
     cart_json = json.dumps([item.dict() for item in cart_items])
 
     if total_sats <= 0:
-        # Fully covered by credit
+        # Fully covered by credit — order is immediately "paid"
         order = await create_order(
             shop_id=shop_id,
             payment_hash="credit_" + urlsafe_short_hash(),
@@ -336,6 +367,7 @@ async def tma_checkout(
             buyer_name=data.buyer_name,
             buyer_address=data.buyer_address,
             has_physical_items=has_physical,
+            credit_used=credit_used,
         )
         await update_order_status(order.id, "paid")
         await delete_cart(shop_id, user.chat_id)
@@ -376,6 +408,9 @@ async def tma_checkout(
             },
         )
     except Exception as e:
+        # Rollback credit reservation on invoice failure
+        if credit_used > 0:
+            await restore_credits(shop_id, user.chat_id, credit_used)
         logger.error(f"TMA: Failed to create invoice: {e}")
         raise HTTPException(
             HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -395,10 +430,12 @@ async def tma_checkout(
         buyer_name=data.buyer_name,
         buyer_address=data.buyer_address,
         has_physical_items=has_physical,
+        credit_used=credit_used,
     )
 
-    # Clear cart after order creation
-    await delete_cart(shop_id, user.chat_id)
+    # Cart is NOT cleared here — it will be cleared when payment confirms
+    # (in tasks.py wait_for_paid_invoices). If payment never arrives,
+    # cleanup_expired_orders restores credits and the cart is still intact.
 
     return {
         "order_id": order.id,
@@ -416,11 +453,14 @@ async def tma_checkout(
 
 @tma_api_router.get("/{shop_id}/orders")
 async def tma_get_orders(
-    shop_id: str, authorization: Optional[str] = Header(None)
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Customer's order history."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
     orders = await get_orders_by_chat(shop_id, user.chat_id)
     return [
         {
@@ -438,18 +478,38 @@ async def tma_get_orders(
     ]
 
 
+@tma_api_router.get("/{shop_id}/orders/{order_id}/status")
+async def tma_order_status(
+    shop_id: str,
+    order_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    """Lightweight payment status check for polling."""
+    shop = await _get_shop_or_404(shop_id)
+    user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
+    order = await get_order(order_id)
+    if not order or order.telegram_chat_id != user.chat_id:
+        raise HTTPException(HTTPStatus.NOT_FOUND, "Order not found")
+    return {"status": order.status}
+
+
 # --- Credits ---
 
 
 @tma_api_router.get("/{shop_id}/credits")
 async def tma_get_credits(
-    shop_id: str, authorization: Optional[str] = Header(None)
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Store credit balance + individual credit entries."""
     from .crud import get_available_credits
 
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
     balance = await get_total_available_credit(shop_id, user.chat_id)
     credits = await get_available_credits(shop_id, user.chat_id)
     return {
@@ -476,10 +536,12 @@ async def tma_send_message(
     shop_id: str,
     data: TmaMessageRequest,
     authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Send message to admin."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
 
     msg = await create_message(
         shop_id=shop_id,
@@ -502,11 +564,14 @@ async def tma_send_message(
 
 @tma_api_router.get("/{shop_id}/messages")
 async def tma_get_messages(
-    shop_id: str, authorization: Optional[str] = Header(None)
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Get message history for customer."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
     messages = await get_message_thread(shop_id, user.chat_id)
     return [
         {
@@ -528,6 +593,7 @@ async def tma_submit_return(
     shop_id: str,
     data: TmaReturnRequest,
     authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Submit return request."""
     shop = await _get_shop_or_404(shop_id)
@@ -535,6 +601,7 @@ async def tma_submit_return(
         raise HTTPException(HTTPStatus.BAD_REQUEST, "Returns not allowed")
 
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_checkout_limiter.check(_client_ip(request))
 
     order = await get_order(data.order_id)
     if not order or order.telegram_chat_id != user.chat_id:
@@ -544,6 +611,20 @@ async def tma_submit_return(
             HTTPStatus.BAD_REQUEST, "Returns only for paid orders"
         )
 
+    # Enforce return window
+    if shop.return_window_hours > 0:
+        from datetime import datetime, timedelta, timezone
+
+        order_time = datetime.fromisoformat(
+            order.timestamp.replace("Z", "+00:00")
+        )
+        window_end = order_time + timedelta(hours=shop.return_window_hours)
+        if datetime.now(timezone.utc) > window_end:
+            raise HTTPException(
+                HTTPStatus.BAD_REQUEST,
+                f"Return window expired ({shop.return_window_hours}h after purchase)",
+            )
+
     # Block duplicate returns
     existing = await get_active_return_for_order(data.order_id)
     if existing:
@@ -551,17 +632,41 @@ async def tma_submit_return(
             HTTPStatus.CONFLICT, "Return already exists for this order"
         )
 
-    # Parse return items and calculate refund
+    # Parse return items
     try:
         return_items = json.loads(data.items_json)
     except (json.JSONDecodeError, TypeError):
         raise HTTPException(HTTPStatus.BAD_REQUEST, "Invalid items_json")
 
-    refund_amount = sum(
-        i["price"] * i["quantity"] for i in return_items
-    )
+    # Validate against order's actual cart (use order prices, not client)
+    order_items = json.loads(order.cart_json)
+    order_lookup = {i["product_id"]: i for i in order_items}
 
-    refund_sats = await to_sats(refund_amount, shop.currency)
+    validated_refund = 0
+    validated_items = []
+    for item in return_items:
+        pid = item.get("product_id")
+        qty = item.get("quantity", 0)
+        if pid not in order_lookup:
+            raise HTTPException(
+                HTTPStatus.BAD_REQUEST, f"Item {pid} not in order"
+            )
+        orig = order_lookup[pid]
+        if qty > orig["quantity"]:
+            raise HTTPException(
+                HTTPStatus.BAD_REQUEST,
+                f"Cannot return more than ordered for {orig['title']}",
+            )
+        validated_refund += orig["price"] * qty
+        validated_items.append({
+            "product_id": pid,
+            "title": orig["title"],
+            "quantity": qty,
+            "price": orig["price"],
+        })
+
+    items_json_validated = json.dumps(validated_items)
+    refund_sats = await to_sats(validated_refund, shop.currency)
 
     bot = bot_manager.get_bot(shop_id)
 
@@ -569,7 +674,7 @@ async def tma_submit_return(
         shop_id=shop_id,
         order_id=data.order_id,
         chat_id=user.chat_id,
-        items_json=data.items_json,
+        items_json=items_json_validated,
         refund_amount_sats=refund_sats,
         reason=data.reason,
     )
@@ -587,17 +692,16 @@ async def tma_submit_return(
 
 @tma_api_router.get("/{shop_id}/returns")
 async def tma_get_returns(
-    shop_id: str, authorization: Optional[str] = Header(None)
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
 ):
     """Customer's return history."""
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
+    tma_api_limiter.check(_client_ip(request))
 
-    # Get all returns for this customer across all orders
-    all_returns = await get_returns(shop_id)
-    customer_returns = [
-        r for r in all_returns if r.chat_id == user.chat_id
-    ]
+    customer_returns = await get_returns_by_chat(shop_id, user.chat_id)
 
     return [
         {

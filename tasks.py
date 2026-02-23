@@ -9,15 +9,18 @@ from lnbits.tasks import register_invoice_listener
 
 from .crud import (
     create_message,
+    delete_cart,
     get_cart,
     get_commercials,
     get_customers,
     get_enabled_shops,
+    get_expired_pending_orders,
     get_order_by_payment_hash,
     get_orders,
     get_stale_carts,
     has_commercial_been_sent,
     log_commercial_send,
+    restore_credits,
     update_commercial_stock_snapshot,
     update_order_status,
 )
@@ -149,6 +152,9 @@ async def wait_for_paid_invoices() -> None:
 
             await update_order_status(order.id, "paid")
 
+            # Clear cart now that payment is confirmed
+            await delete_cart(shop_id, int(chat_id))
+
             # Deduct inventory stock
             bot = bot_manager.get_bot(shop_id)
             if bot:
@@ -182,6 +188,26 @@ async def wait_for_paid_invoices() -> None:
 
         except Exception as e:
             logger.error(f"Error processing paid invoice: {e}")
+
+
+async def cleanup_expired_orders() -> None:
+    """Restore reserved credits for expired pending orders."""
+    await asyncio.sleep(60)
+    while True:
+        try:
+            expired = await get_expired_pending_orders(older_than_minutes=20)
+            for order in expired:
+                if order.credit_used > 0:
+                    await restore_credits(
+                        order.shop_id, order.telegram_chat_id, order.credit_used
+                    )
+                await update_order_status(order.id, "expired")
+                logger.info(
+                    f"Expired order {order.id}, restored {order.credit_used} credit sats"
+                )
+        except Exception as e:
+            logger.error(f"Order cleanup error: {e}")
+        await asyncio.sleep(300)
 
 
 # --- Commercial message builder ---

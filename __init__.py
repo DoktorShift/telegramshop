@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from loguru import logger
 
 from .crud import db
-from .tasks import wait_for_paid_invoices, start_all_bots, stop_all_bots, run_commercial_engine
+from .tasks import wait_for_paid_invoices, start_all_bots, stop_all_bots, run_commercial_engine, cleanup_expired_orders
 from .views import telegramshop_generic_router
 from .views_api import telegramshop_api_router
 from .views_api_tma import tma_api_router
@@ -50,6 +50,10 @@ def telegramshop_start():
         "ext_telegramshop_commercials", run_commercial_engine
     )
     scheduled_tasks.append(task3)
+    task4 = create_permanent_unique_task(
+        "ext_telegramshop_order_cleanup", cleanup_expired_orders
+    )
+    scheduled_tasks.append(task4)
 
 
 __all__ = [
