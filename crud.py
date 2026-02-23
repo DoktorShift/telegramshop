@@ -36,6 +36,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             enable_order_tracking, use_webhook, admin_chat_id,
             allow_returns, allow_credit_refund, return_window_hours,
             shipping_flat_rate, shipping_free_threshold, shipping_per_kg,
+            include_tags, omit_tags,
             webhook_secret
         ) VALUES (
             :id, :wallet, :title, :description, :bot_token, :currency,
@@ -43,6 +44,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             :enable_order_tracking, :use_webhook, :admin_chat_id,
             :allow_returns, :allow_credit_refund, :return_window_hours,
             :shipping_flat_rate, :shipping_free_threshold, :shipping_per_kg,
+            :include_tags, :omit_tags,
             :webhook_secret
         )
         """,
@@ -64,6 +66,8 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             "shipping_flat_rate": data.shipping_flat_rate,
             "shipping_free_threshold": data.shipping_free_threshold,
             "shipping_per_kg": data.shipping_per_kg,
+            "include_tags": data.include_tags,
+            "omit_tags": data.omit_tags,
             "webhook_secret": webhook_secret,
         },
     )
@@ -90,7 +94,9 @@ async def update_shop(shop_id: str, data: CreateShop) -> Shop:
             return_window_hours = :return_window_hours,
             shipping_flat_rate = :shipping_flat_rate,
             shipping_free_threshold = :shipping_free_threshold,
-            shipping_per_kg = :shipping_per_kg
+            shipping_per_kg = :shipping_per_kg,
+            include_tags = :include_tags,
+            omit_tags = :omit_tags
         WHERE id = :id
         """,
         {
@@ -110,6 +116,8 @@ async def update_shop(shop_id: str, data: CreateShop) -> Shop:
             "shipping_flat_rate": data.shipping_flat_rate,
             "shipping_free_threshold": data.shipping_free_threshold,
             "shipping_per_kg": data.shipping_per_kg,
+            "include_tags": data.include_tags,
+            "omit_tags": data.omit_tags,
         },
     )
     shop = await get_shop(shop_id)
@@ -283,6 +291,7 @@ async def create_order(
     buyer_name: Optional[str] = None,
     buyer_address: Optional[str] = None,
     has_physical_items: bool = False,
+    credit_used: int = 0,
 ) -> Order:
     order_id = urlsafe_short_hash()
     await db.execute(
@@ -291,12 +300,12 @@ async def create_order(
             id, shop_id, payment_hash, telegram_chat_id,
             telegram_username, amount_sats, currency, currency_amount,
             cart_json, buyer_email, buyer_name, buyer_address,
-            has_physical_items
+            has_physical_items, credit_used
         ) VALUES (
             :id, :shop_id, :payment_hash, :telegram_chat_id,
             :telegram_username, :amount_sats, :currency, :currency_amount,
             :cart_json, :buyer_email, :buyer_name, :buyer_address,
-            :has_physical_items
+            :has_physical_items, :credit_used
         )
         """,
         {
@@ -313,6 +322,7 @@ async def create_order(
             "buyer_name": buyer_name,
             "buyer_address": buyer_address,
             "has_physical_items": int(has_physical_items),
+            "credit_used": credit_used,
         },
     )
     order = await get_order(order_id)
@@ -689,6 +699,54 @@ async def use_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
         total_used += use
 
     return total_used
+
+
+async def restore_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
+    """Reverse a credit reservation (LIFO — undo most-recent first)."""
+    rows = await db.fetchall(
+        """SELECT * FROM telegramshop.credits
+           WHERE shop_id = :shop_id AND chat_id = :chat_id
+           AND used_sats > 0
+           ORDER BY timestamp DESC""",
+        {"shop_id": shop_id, "chat_id": chat_id},
+    )
+    credits = [Credit(**dict(row)) for row in rows]
+    remaining = amount_sats
+    for credit in credits:
+        if remaining <= 0:
+            break
+        restore = min(credit.used_sats, remaining)
+        if restore > 0:
+            await db.execute(
+                "UPDATE telegramshop.credits SET used_sats = used_sats - :restore WHERE id = :id",
+                {"id": credit.id, "restore": restore},
+            )
+            remaining -= restore
+    return amount_sats - remaining
+
+
+async def get_expired_pending_orders(older_than_minutes: int = 20) -> list[Order]:
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)
+    ).strftime("%Y-%m-%d %H:%M:%S")
+    rows = await db.fetchall(
+        """SELECT * FROM telegramshop.orders
+           WHERE status = 'pending' AND timestamp < :cutoff""",
+        {"cutoff": cutoff},
+    )
+    return [Order(**dict(row)) for row in rows]
+
+
+async def get_returns_by_chat(shop_id: str, chat_id: int) -> list[Return]:
+    rows = await db.fetchall(
+        """SELECT * FROM telegramshop.returns
+           WHERE shop_id = :shop_id AND chat_id = :chat_id
+           ORDER BY timestamp DESC""",
+        {"shop_id": shop_id, "chat_id": chat_id},
+    )
+    return [Return(**dict(row)) for row in rows]
 
 
 # --- Carts ---

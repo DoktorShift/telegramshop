@@ -42,7 +42,22 @@ const TMA = {
       tg.ready()
       tg.expand()
       tg.setHeaderColor(tg.themeParams.bg_color || '#ffffff')
+      tg.setBackgroundColor(tg.themeParams.bg_color || '#ffffff')
+      if (tg.setBottomBarColor) {
+        tg.setBottomBarColor(tg.themeParams.bottom_bar_bg_color || tg.themeParams.bg_color || '#ffffff')
+      }
       this.initData = tg.initData
+    }
+
+    // Listen for runtime theme changes
+    if (tg) {
+      tg.onEvent('themeChanged', () => {
+        tg.setHeaderColor(tg.themeParams.bg_color || '#ffffff')
+        tg.setBackgroundColor(tg.themeParams.bg_color || '#ffffff')
+        if (tg.setBottomBarColor) {
+          tg.setBottomBarColor(tg.themeParams.bottom_bar_bg_color || tg.themeParams.bg_color || '#ffffff')
+        }
+      })
     }
 
     if (!this.initData) {
@@ -65,7 +80,14 @@ const TMA = {
     await this.authenticate()
     await this.loadProducts()
     await this.loadCart()
-    this.route()
+
+    // Deep link via startapp parameter (e.g. ?startapp=product_abc123)
+    const startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || ''
+    if (startParam.startsWith('product_') && !window.location.hash) {
+      window.location.hash = '#/product/' + startParam.slice(8)
+    } else {
+      this.route()
+    }
   },
 
   _showDevBanner() {
@@ -260,6 +282,7 @@ const TMA = {
       item.quantity = newQty
     }
 
+    this.haptic('selection')
     this.saveCart()
     this.updateCartBadge()
 
@@ -273,15 +296,25 @@ const TMA = {
 
   clearCart() {
     if (this.cart.length === 0) return
-    // Confirmation
-    if (!confirm('Remove all items from your cart?')) return
 
-    this.cart = []
-    if (this.authenticated) {
-      this.api('/' + this.shopId + '/cart', { method: 'DELETE' }).catch(() => {})
+    const doClear = () => {
+      this.cart = []
+      if (this.authenticated) {
+        this.api('/' + this.shopId + '/cart', { method: 'DELETE' }).catch(() => {})
+      }
+      this.updateCartBadge()
+      this.renderCart()
     }
-    this.updateCartBadge()
-    this.renderCart()
+
+    // Use native Telegram confirm if available
+    const tg = window.Telegram && window.Telegram.WebApp
+    if (tg && tg.showConfirm) {
+      tg.showConfirm('Remove all items from your cart?', (confirmed) => {
+        if (confirmed) doClear()
+      })
+    } else {
+      if (confirm('Remove all items from your cart?')) doClear()
+    }
   },
 
   cartTotal() {
@@ -333,6 +366,16 @@ const TMA = {
     // MainButton: hide unless cart screen re-shows it
     if (tg && tg.MainButton) {
       tg.MainButton.hide()
+    }
+
+    // Closing confirmation: enable during checkout/payment to prevent data loss
+    const protectedScreens = ['checkout', 'payment']
+    if (tg) {
+      if (protectedScreens.includes(route)) {
+        tg.enableClosingConfirmation()
+      } else {
+        tg.disableClosingConfirmation()
+      }
     }
 
     // BackButton: show/hide based on tab vs detail screens
@@ -473,6 +516,7 @@ const TMA = {
 
   filterCategory(cat) {
     this.activeCategory = cat
+    this.haptic('selection')
     this.renderHome()
   },
 
@@ -665,7 +709,7 @@ const TMA = {
       priceHtml +
       (product.description ? '<div class="detail-desc">' + this.escapeHtml(product.description) + '</div>' : '') +
       metaHtml +
-      buttonHtml
+      '<div class="detail-actions">' + buttonHtml + '</div>'
 
     this._galleryImages = images
     this._galleryIndex = 0
@@ -691,33 +735,32 @@ const TMA = {
     let isHorizontal = null
     const threshold = 40
 
-    track.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX
-      startY = e.touches[0].clientY
+    const onStart = (x, y) => {
+      startX = x
+      startY = y
       currentX = 0
       dragging = true
       isHorizontal = null
       track.classList.add('swiping')
-    }, { passive: true })
+    }
 
-    track.addEventListener('touchmove', (e) => {
+    const onMove = (x, y, e) => {
       if (!dragging) return
-      const dx = e.touches[0].clientX - startX
-      const dy = e.touches[0].clientY - startY
+      const dx = x - startX
+      const dy = y - startY
 
-      // Lock direction on first significant movement
       if (isHorizontal === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
         isHorizontal = Math.abs(dx) > Math.abs(dy)
       }
       if (!isHorizontal) return
 
-      e.preventDefault()
+      if (e) e.preventDefault()
       currentX = dx
       const offset = -(this._galleryIndex * gallery.offsetWidth) + currentX
       track.style.transform = 'translateX(' + offset + 'px)'
-    }, { passive: false })
+    }
 
-    track.addEventListener('touchend', () => {
+    const onEnd = () => {
       if (!dragging) return
       dragging = false
       track.classList.remove('swiping')
@@ -730,7 +773,50 @@ const TMA = {
         }
       }
       this._updateGalleryPosition()
-    }, { passive: true })
+    }
+
+    // Touch events
+    track.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true })
+    track.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false })
+    track.addEventListener('touchend', onEnd, { passive: true })
+
+    // Mouse events (desktop)
+    track.addEventListener('mousedown', (e) => { e.preventDefault(); onStart(e.clientX, e.clientY) })
+    track.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY, e))
+    track.addEventListener('mouseup', onEnd)
+    track.addEventListener('mouseleave', () => { if (dragging) onEnd() })
+
+    // Arrow buttons
+    this._addGalleryArrows(gallery)
+  },
+
+  _addGalleryArrows(gallery) {
+    const leftBtn = document.createElement('button')
+    leftBtn.className = 'gallery-arrow gallery-arrow-left'
+    leftBtn.innerHTML = '&#8249;'
+    leftBtn.onclick = (e) => { e.stopPropagation(); this.galleryPrev() }
+
+    const rightBtn = document.createElement('button')
+    rightBtn.className = 'gallery-arrow gallery-arrow-right'
+    rightBtn.innerHTML = '&#8250;'
+    rightBtn.onclick = (e) => { e.stopPropagation(); this.galleryNext() }
+
+    gallery.appendChild(leftBtn)
+    gallery.appendChild(rightBtn)
+  },
+
+  galleryPrev() {
+    if (this._galleryIndex > 0) {
+      this._galleryIndex--
+      this._updateGalleryPosition()
+    }
+  },
+
+  galleryNext() {
+    if (this._galleryIndex < this._galleryImages.length - 1) {
+      this._galleryIndex++
+      this._updateGalleryPosition()
+    }
   },
 
   _updateGalleryPosition() {
@@ -812,6 +898,7 @@ const TMA = {
 
   _initLightboxSwipe() {
     const track = document.getElementById('lightbox-track')
+    const overlay = document.getElementById('lightbox')
     if (!track) return
 
     let startX = 0
@@ -819,21 +906,21 @@ const TMA = {
     let dragging = false
     const threshold = 50
 
-    track.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX
+    const onStart = (x) => {
+      startX = x
       currentX = 0
       dragging = true
       track.style.transition = 'none'
-    }, { passive: true })
+    }
 
-    track.addEventListener('touchmove', (e) => {
+    const onMove = (x) => {
       if (!dragging) return
-      currentX = e.touches[0].clientX - startX
+      currentX = x - startX
       const w = window.innerWidth
       track.style.transform = 'translateX(' + (-(this._lightboxIndex * w) + currentX) + 'px)'
-    }, { passive: true })
+    }
 
-    track.addEventListener('touchend', () => {
+    const onEnd = () => {
       if (!dragging) return
       dragging = false
       track.style.transition = 'transform 0.3s ease'
@@ -846,10 +933,65 @@ const TMA = {
         }
       }
       this._positionLightbox()
-    }, { passive: true })
+    }
+
+    // Touch events
+    track.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), { passive: true })
+    track.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), { passive: true })
+    track.addEventListener('touchend', onEnd, { passive: true })
+
+    // Mouse events (desktop)
+    track.addEventListener('mousedown', (e) => { e.preventDefault(); onStart(e.clientX) })
+    track.addEventListener('mousemove', (e) => onMove(e.clientX))
+    track.addEventListener('mouseup', onEnd)
+    track.addEventListener('mouseleave', () => { if (dragging) onEnd() })
+
+    // Arrow buttons
+    if (this._galleryImages.length > 1 && overlay) {
+      const leftBtn = document.createElement('button')
+      leftBtn.className = 'lightbox-arrow lightbox-arrow-left'
+      leftBtn.innerHTML = '&#8249;'
+      leftBtn.onclick = (e) => { e.stopPropagation(); this.lightboxPrev() }
+
+      const rightBtn = document.createElement('button')
+      rightBtn.className = 'lightbox-arrow lightbox-arrow-right'
+      rightBtn.innerHTML = '&#8250;'
+      rightBtn.onclick = (e) => { e.stopPropagation(); this.lightboxNext() }
+
+      overlay.appendChild(leftBtn)
+      overlay.appendChild(rightBtn)
+    }
+
+    // Keyboard navigation
+    this._lightboxKeyHandler = (e) => {
+      if (e.key === 'ArrowLeft') this.lightboxPrev()
+      else if (e.key === 'ArrowRight') this.lightboxNext()
+      else if (e.key === 'Escape') this.closeLightbox()
+    }
+    document.addEventListener('keydown', this._lightboxKeyHandler)
+  },
+
+  _lightboxKeyHandler: null,
+
+  lightboxPrev() {
+    if (this._lightboxIndex > 0) {
+      this._lightboxIndex--
+      this._positionLightbox()
+    }
+  },
+
+  lightboxNext() {
+    if (this._lightboxIndex < this._galleryImages.length - 1) {
+      this._lightboxIndex++
+      this._positionLightbox()
+    }
   },
 
   closeLightbox() {
+    if (this._lightboxKeyHandler) {
+      document.removeEventListener('keydown', this._lightboxKeyHandler)
+      this._lightboxKeyHandler = null
+    }
     const el = document.getElementById('lightbox')
     if (el) {
       el.classList.remove('visible')
@@ -1084,6 +1226,12 @@ const TMA = {
   },
 
   async submitCheckout(body) {
+    // Show MainButton loading spinner if available
+    const tg = window.Telegram && window.Telegram.WebApp
+    if (tg && tg.MainButton && tg.MainButton.isVisible) {
+      tg.MainButton.showProgress(false)
+    }
+
     try {
       const url = this.baseUrl + '/' + this.shopId + '/checkout'
       const headers = { 'Content-Type': 'application/json' }
@@ -1117,6 +1265,7 @@ const TMA = {
       if (result.status === 'paid') {
         this.cart = []
         this.updateCartBadge()
+        if (tg && tg.MainButton) tg.MainButton.hideProgress()
         this.haptic('notification', 'success')
         this.showToast('Order placed!')
         this.loadProducts()
@@ -1125,12 +1274,12 @@ const TMA = {
         return
       }
 
-      this.cart = []
-      this.updateCartBadge()
+      if (tg && tg.MainButton) tg.MainButton.hideProgress()
       this._pendingPayment = result
       this.navigate('#/payment')
       this.showPaymentScreen(result)
     } catch (e) {
+      if (tg && tg.MainButton) tg.MainButton.hideProgress()
       this.showToast('Checkout failed: ' + e.message)
       const btn = document.getElementById('checkout-submit-btn')
       if (btn) {
@@ -1160,19 +1309,23 @@ const TMA = {
         ? '<div class="payment-credit">\u2728 Store credit applied: \u2212' + result.credit_used.toLocaleString() + ' sats</div>'
         : '') +
       qrHtml +
-      '<div class="payment-bolt11" onclick="TMA.copyBolt11(\'' + bolt11 + '\')">' +
-      this.escapeHtml(bolt11) +
+      '<div class="payment-bolt11" onclick="TMA.copyBolt11()">' +
+      '<span id="bolt11-text"></span>' +
       '<div class="bolt11-tap-hint">Tap to copy</div>' +
       '</div>' +
       '<div class="payment-actions">' +
-      '<a href="lightning:' + bolt11 + '" class="btn-tap-to-pay">\u26a1 Tap to Pay</a>' +
-      '<button class="btn-secondary mb-sm" onclick="TMA.copyBolt11(\'' + bolt11 + '\')">Copy Invoice</button>' +
+      '<button class="btn-tap-to-pay" onclick="TMA.openPayLink()">\u26a1 Tap to Pay</button>' +
+      '<button class="btn-secondary mb-sm" onclick="TMA.copyBolt11()">Copy Invoice</button>' +
       '</div>' +
       '<p class="text-hint mt-md" style="font-size:12px">Invoice expires in 15 minutes</p>' +
       '<div class="payment-status" id="payment-status">' +
       '<div class="spinner" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px"></div>' +
       'Waiting for payment\u2026' +
       '</div></div>'
+
+    // Set bolt11 text safely (no HTML escaping needed)
+    const bolt11El = document.getElementById('bolt11-text')
+    if (bolt11El) bolt11El.textContent = bolt11
 
     // Generate QR code
     if (bolt11) {
@@ -1194,6 +1347,8 @@ const TMA = {
   },
 
   copyBolt11(bolt11) {
+    if (!bolt11) bolt11 = this._pendingPayment && this._pendingPayment.bolt11
+    if (!bolt11) return
     navigator.clipboard.writeText(bolt11).then(() => {
       this.showToast('Invoice copied!')
       this.haptic('notification', 'success')
@@ -1208,12 +1363,24 @@ const TMA = {
     })
   },
 
+  openPayLink() {
+    const bolt11 = this._pendingPayment && this._pendingPayment.bolt11
+    if (!bolt11) return
+    const uri = 'lightning:' + bolt11
+    const tg = window.Telegram && window.Telegram.WebApp
+    if (tg && tg.openLink) {
+      tg.openLink(uri)
+    } else {
+      window.location.href = uri
+    }
+  },
+
   shareProduct(productId) {
     if (!this.botUsername) return
     const product = this.products.find(p => p.id === productId)
     if (!product) return
 
-    const url = 'https://t.me/' + this.botUsername + '?start=product_' + productId
+    const url = 'https://t.me/' + this.botUsername + '?startapp=product_' + productId
     const text = product.title + ' — ' + this.formatPrice(product.price)
 
     // Use Telegram's native share if available
@@ -1243,44 +1410,55 @@ const TMA = {
 
   _stopPolling() {
     if (this._pollTimer) {
-      clearInterval(this._pollTimer)
+      clearTimeout(this._pollTimer)
       this._pollTimer = null
     }
   },
 
   async pollPayment(orderId) {
     this._stopPolling()
+    const startTime = Date.now()
+    const maxDuration = 15 * 60 * 1000  // 15 minutes
 
-    let attempts = 0
-    this._pollTimer = setInterval(async () => {
-      attempts++
-      if (attempts > 100) {
+    const getInterval = () => {
+      const elapsed = Date.now() - startTime
+      if (elapsed < 2 * 60 * 1000) return 5000     // 5s for first 2 min
+      if (elapsed < 5 * 60 * 1000) return 10000     // 10s until 5 min
+      return 30000                                    // 30s until 15 min
+    }
+
+    const poll = async () => {
+      if (Date.now() - startTime > maxDuration) {
         this._stopPolling()
         const el = document.getElementById('payment-status')
-        if (el) el.innerHTML = '\u23f0 Invoice expired. <button class="btn-text" onclick="TMA.navigate(\'#/cart\')">Tap to try again</button>'
+        if (el) el.innerHTML = '\u23f0 Invoice expired. <button class="btn-text" onclick="TMA.navigate(\'#/cart\')">Back to cart</button>'
         return
       }
       try {
-        const orders = await this.api('/' + this.shopId + '/orders')
-        const order = orders.find(o => o.id === orderId)
-        if (order && order.status === 'paid') {
+        const result = await this.api('/' + this.shopId + '/orders/' + orderId + '/status')
+        if (result.status === 'paid') {
           this._stopPolling()
           this._pendingPayment = null
+          this.cart = []
+          this.updateCartBadge()
           this.haptic('notification', 'success')
           const el = document.getElementById('payment-status')
           if (el) {
             el.className = 'payment-status confirmed'
             el.innerHTML = '\u2705 Payment confirmed!'
           }
-          // Refresh products for updated inventory
           this.loadProducts()
           this.loadCredits()
           setTimeout(() => this.navigate('#/order/' + orderId), 1200)
+          return
         }
       } catch {
         // Silent
       }
-    }, 3000)
+      this._pollTimer = setTimeout(poll, getInterval())
+    }
+
+    this._pollTimer = setTimeout(poll, getInterval())
   },
 
   // ===== Render: Orders =====
@@ -1881,6 +2059,8 @@ const TMA = {
       tg.HapticFeedback.impactOccurred(style || 'medium')
     } else if (type === 'notification') {
       tg.HapticFeedback.notificationOccurred(style || 'success')
+    } else if (type === 'selection') {
+      tg.HapticFeedback.selectionChanged()
     }
   },
 }

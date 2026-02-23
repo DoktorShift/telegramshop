@@ -15,7 +15,6 @@ from .product_sources import (
     fetch_inventory_products,
 )
 
-SEP = "━━━━━━━━━━━━━━━━━━"
 
 
 def _safe_err(e: Exception, bot_token: str) -> str:
@@ -139,9 +138,21 @@ class TelegramBot:
         me = await self.api_call("getMe")
         self._bot_username = me.get("username")
         await self.set_commands()
+        await self._set_menu_button()
         await self.refresh_products()
         logger.info(
             f"Bot started for shop '{self.shop.title}' (@{self._bot_username})"
+        )
+
+    async def _set_menu_button(self) -> None:
+        """Set the bot's menu button to open the TMA directly."""
+        await self.api_call(
+            "setChatMenuButton",
+            menu_button={
+                "type": "web_app",
+                "text": "Shop",
+                "web_app": {"url": self.tma_url},
+            },
         )
 
     async def stop(self) -> None:
@@ -157,7 +168,10 @@ class TelegramBot:
     async def refresh_products(self) -> None:
         try:
             self.products = await fetch_inventory_products(
-                self.shop.inventory_id, self.user_id
+                self.shop.inventory_id,
+                self.user_id,
+                include_tags=self.shop.include_tags,
+                omit_tags=self.shop.omit_tags,
             )
             active = [p for p in self.products if not p.disabled]
             logger.info(
@@ -239,21 +253,36 @@ class TelegramBot:
 
         # Track customer
         username = session.username
+        first_name = session.username  # best we have here
         await upsert_customer(
             self.shop.id, chat_id, username=username
         )
 
         title = escape_html(self.shop.title)
         desc = escape_html(self.shop.description or "")
+        active = self.get_active_products()
+        product_count = len(active)
 
-        text = f"<b>{title}</b>\n"
-        text += f"{SEP}\n\n"
+        # Build welcome text
+        greeting = f"Welcome to <b>{title}</b>"
+        if session.username:
+            greeting = f"Hey {escape_html(session.username)}! {greeting}"
+
+        text = f"\U0001f6cd {greeting}\n\n"
         if desc:
             text += f"{desc}\n\n"
-        text += (
-            "Browse products, pay instantly, track orders\n"
-            "— all right here in Telegram.\n"
-        )
+
+        # Feature highlights
+        features = []
+        if product_count > 0:
+            features.append(
+                f"\U0001f4e6 <b>{product_count}</b> product"
+                f"{'s' if product_count != 1 else ''} available"
+            )
+        features.append("\u26a1 Instant Lightning payments")
+        if self.shop.allow_returns:
+            features.append("\U0001f504 Easy returns")
+        text += "\n".join(features) + "\n"
 
         # Deep link: /start product_<id> → open TMA on that product
         tma_url = self.tma_url
@@ -263,7 +292,17 @@ class TelegramBot:
                 tma_url = self.tma_url + f"#/product/{product_id}"
 
         buttons = [
-            [{"text": "Open Shop", "web_app": {"url": tma_url}}],
+            [{"text": "\U0001f6cd Browse Products", "web_app": {"url": tma_url}}],
+            [
+                {
+                    "text": "\U0001f4e6 My Orders",
+                    "web_app": {"url": self.tma_url + "#/orders"},
+                },
+                {
+                    "text": "\U0001f4ac Messages",
+                    "web_app": {"url": self.tma_url + "#/messages"},
+                },
+            ],
         ]
         keyboard = self._inline_keyboard(buttons)
         await self.send_message(chat_id, text, reply_markup=keyboard)
@@ -275,25 +314,32 @@ class TelegramBot:
     ) -> None:
         cart_items = json.loads(order.cart_json)
         items_text = "\n".join(
-            f"  {item['quantity']}x {escape_html(item['title'])}"
+            f"  • {item['quantity']}× {escape_html(item['title'])}"
             for item in cart_items
         )
         text = (
-            f"<b>Payment Confirmed!</b>\n"
-            f"{SEP}\n\n"
-            f"Thank you for your order!\n\n"
-            f"<b>Order #{order.id[:8]}</b>\n"
-            f"{items_text}\n"
-            f"Total: {format_sats(order.amount_sats)} sats"
+            f"✅ <b>Payment Confirmed</b>\n\n"
+            f"Thanks for your order!\n\n"
+            f"🧾 <b>#{order.id[:8]}</b>\n"
+            f"{items_text}\n\n"
+            f"💰 <b>{format_sats(order.amount_sats)} sats</b>"
         )
         if credit_used > 0:
-            text += f"\nStore credit: {format_sats(credit_used)} sats"
+            text += f"\n🏷 Credit applied: {format_sats(credit_used)} sats"
 
         tma_url = self.tma_url
         keyboard = self._inline_keyboard(
             [
-                [{"text": "My Orders", "web_app": {"url": tma_url + "#/orders"}}],
-                [{"text": "Open Shop", "web_app": {"url": tma_url}}],
+                [
+                    {
+                        "text": "📦 My Orders",
+                        "web_app": {"url": tma_url + "#/orders"},
+                    },
+                    {
+                        "text": "🛍 Shop",
+                        "web_app": {"url": tma_url},
+                    },
+                ],
             ]
         )
         await self.send_message(chat_id, text, reply_markup=keyboard)
@@ -310,21 +356,25 @@ class TelegramBot:
         cart_items = json.loads(order.cart_json)
         lines = []
         for i in cart_items:
-            line = f"  {i['quantity']}x {i['title']}"
+            line = f"  • {i['quantity']}× {i['title']}"
             if i.get("sku"):
-                line += f" [{i['sku']}]"
+                line += f" <i>[{i['sku']}]</i>"
             lines.append(line)
         items_text = "\n".join(lines)
+        customer = (
+            f"@{order.telegram_username}"
+            if order.telegram_username
+            else "anonymous"
+        )
         text = (
-            f"<b>New Order!</b>\n"
-            f"{SEP}\n\n"
-            f"Order #{order.id[:8]}\n"
-            f"Customer: @{order.telegram_username or 'unknown'}\n"
-            f"{items_text}\n"
-            f"Total: {format_sats(order.amount_sats)} sats"
+            f"🔔 <b>New Order</b>\n\n"
+            f"🧾 <b>#{order.id[:8]}</b>\n"
+            f"👤 {customer}\n\n"
+            f"{items_text}\n\n"
+            f"💰 <b>{format_sats(order.amount_sats)} sats</b>"
         )
         if order.buyer_email:
-            text += f"\n{order.buyer_email}"
+            text += f"\n📧 {order.buyer_email}"
         await self.send_message(admin_chat_id, text)
 
     async def notify_admin_message(
@@ -338,10 +388,10 @@ class TelegramBot:
             return
         admin_chat_id = int(self.shop.admin_chat_id)
         user_display = f"@{username}" if username else f"Chat #{chat_id}"
-        text = f"<b>New message from {escape_html(user_display)}</b>\n"
+        text = f"💬 <b>Message from {escape_html(user_display)}</b>\n"
         if order_id:
-            text += f"Order: #{order_id[:8]}\n"
-        text += f"\n\"{escape_html(content)}\""
+            text += f"🧾 Order #{order_id[:8]}\n"
+        text += f"\n<i>\"{escape_html(content)}\"</i>"
         await self.send_message(admin_chat_id, text)
 
     async def notify_admin_return(self, ret, order: Order) -> None:
@@ -349,15 +399,21 @@ class TelegramBot:
             return
         admin_chat_id = int(self.shop.admin_chat_id)
         items = json.loads(ret.items_json)
-        items_text = ", ".join(f"{i['quantity']}x {i['title']}" for i in items)
+        items_text = "\n".join(
+            f"  • {i['quantity']}× {i['title']}" for i in items
+        )
+        customer = (
+            f"@{order.telegram_username}"
+            if order.telegram_username
+            else "anonymous"
+        )
         text = (
-            f"<b>Return Request</b>\n"
-            f"{SEP}\n\n"
-            f"Order: #{order.id[:8]}\n"
-            f"Customer: @{order.telegram_username or 'unknown'}\n"
-            f"Items: {escape_html(items_text)}\n"
-            f"Amount: {format_sats(ret.refund_amount_sats)} sats\n"
-            f"Reason: \"{escape_html(ret.reason or 'No reason given')}\""
+            f"🔄 <b>Return Request</b>\n\n"
+            f"🧾 <b>#{order.id[:8]}</b>\n"
+            f"👤 {customer}\n\n"
+            f"{escape_html(items_text)}\n\n"
+            f"💰 Refund: <b>{format_sats(ret.refund_amount_sats)} sats</b>\n"
+            f"📝 <i>\"{escape_html(ret.reason or 'No reason given')}\"</i>"
         )
         await self.send_message(admin_chat_id, text)
 
@@ -366,16 +422,22 @@ class TelegramBot:
     async def send_admin_reply(
         self, chat_id: int, content: str, order_id: Optional[str]
     ) -> None:
-        text = "<b>Message from Shop</b>\n\n"
+        text = f"💬 <b>Message from {escape_html(self.shop.title)}</b>\n\n"
         if order_id:
-            text += f"Regarding Order #{order_id[:8]}\n\n"
-        text += f"\"{escape_html(content)}\""
+            text += f"🧾 Re: Order #{order_id[:8]}\n\n"
+        text += f"<i>\"{escape_html(content)}\"</i>"
         tma_url = self.tma_url
         keyboard = self._inline_keyboard(
             [
                 [
-                    {"text": "Messages", "web_app": {"url": tma_url + "#/messages"}},
-                    {"text": "Shop", "web_app": {"url": tma_url}},
+                    {
+                        "text": "💬 Messages",
+                        "web_app": {"url": tma_url + "#/messages"},
+                    },
+                    {
+                        "text": "🛍 Shop",
+                        "web_app": {"url": tma_url},
+                    },
                 ]
             ]
         )
@@ -387,12 +449,12 @@ class TelegramBot:
         tma_url = self.tma_url
         await self.send_message(
             chat_id,
-            f"<b>Return Approved</b>\n\n"
-            f"You've received <b>{format_sats(amount_sats)} sats</b> "
-            f"in store credit.\n\n"
-            f"It will be applied automatically at checkout.",
+            f"✅ <b>Return Approved</b>\n\n"
+            f"🏷 <b>{format_sats(amount_sats)} sats</b> "
+            f"added to your store credit.\n\n"
+            f"Applied automatically at checkout.",
             reply_markup=self._inline_keyboard(
-                [[{"text": "Open Shop", "web_app": {"url": tma_url}}]]
+                [[{"text": "🛍 Continue Shopping", "web_app": {"url": tma_url}}]]
             ),
         )
 
@@ -402,14 +464,15 @@ class TelegramBot:
         tma_url = self.tma_url
         await self.send_message(
             chat_id,
-            f"<b>Return Approved</b>\n"
-            f"{SEP}\n\n"
-            f"Your refund of <b>{format_sats(amount_sats)} sats</b> "
-            f"has been approved.\n\n"
-            f"Please open Messages in the shop and send us your "
-            f"Lightning address or invoice so we can process your refund.",
+            f"✅ <b>Return Approved</b>\n\n"
+            f"⚡ Refund: <b>{format_sats(amount_sats)} sats</b>\n\n"
+            f"Send us your Lightning address or invoice "
+            f"via Messages so we can process your refund.",
             reply_markup=self._inline_keyboard(
-                [[{"text": "Messages", "web_app": {"url": tma_url + "#/messages"}}]]
+                [[{
+                    "text": "💬 Send Invoice",
+                    "web_app": {"url": tma_url + "#/messages"},
+                }]]
             ),
         )
 
@@ -419,14 +482,20 @@ class TelegramBot:
         tma_url = self.tma_url
         await self.send_message(
             chat_id,
-            f"<b>Return Not Approved</b>\n\n"
-            f"Reason: \"{escape_html(admin_note)}\"\n\n"
-            f"If you have questions, reach us via Messages.",
+            f"❌ <b>Return Not Approved</b>\n\n"
+            f"📝 <i>\"{escape_html(admin_note)}\"</i>\n\n"
+            f"Questions? Reach us via Messages.",
             reply_markup=self._inline_keyboard(
                 [
                     [
-                        {"text": "Messages", "web_app": {"url": tma_url + "#/messages"}},
-                        {"text": "Shop", "web_app": {"url": tma_url}},
+                        {
+                            "text": "💬 Messages",
+                            "web_app": {"url": tma_url + "#/messages"},
+                        },
+                        {
+                            "text": "🛍 Shop",
+                            "web_app": {"url": tma_url},
+                        },
                     ]
                 ]
             ),
@@ -435,21 +504,24 @@ class TelegramBot:
     async def notify_fulfillment_update(
         self, chat_id: int, order: Order, status: str, note: Optional[str]
     ) -> None:
-        status_labels = {
-            "preparing": "Preparing",
-            "shipping": "Shipping",
-            "delivered": "Delivered",
+        status_map = {
+            "preparing": ("📋", "Preparing"),
+            "shipping": ("🚚", "Shipped"),
+            "delivered": ("✅", "Delivered"),
         }
-        label = status_labels.get(status, status)
+        emoji, label = status_map.get(status, ("📦", status))
         text = (
-            f"<b>Order Update</b>\n\n"
-            f"Order #{order.id[:8]} — <b>{label}</b>"
+            f"{emoji} <b>Order #{order.id[:8]}</b>\n\n"
+            f"Status: <b>{label}</b>"
         )
         if note:
-            text += f"\n\n{escape_html(note)}"
+            text += f"\n\n📝 {escape_html(note)}"
         tma_url = self.tma_url
         keyboard = self._inline_keyboard(
-            [[{"text": "View Orders", "web_app": {"url": tma_url + "#/orders"}}]]
+            [[{
+                "text": "📦 View Order",
+                "web_app": {"url": tma_url + f"#/order/{order.id}"},
+            }]]
         )
         await self.send_message(chat_id, text, reply_markup=keyboard)
 
@@ -467,42 +539,48 @@ class TelegramBot:
 
         results = []
         for p in products[:20]:
-            buy_btn = {
-                "text": "Open Shop",
-                "url": f"https://t.me/{self._bot_username}?start=open",
-            }
+            if self._bot_username:
+                buy_btn = {
+                    "text": "🛍 View Product",
+                    "url": (
+                        f"https://t.me/{self._bot_username}"
+                        f"?startapp=product_{p.id}"
+                    ),
+                }
+            else:
+                buy_btn = None
             caption = (
                 f"<b>{escape_html(p.title)}</b>\n"
                 f"{self.format_price(p.price)}"
             )
+            markup = (
+                {"inline_keyboard": [[buy_btn]]} if buy_btn else None
+            )
             if p.image_url and self._is_valid_photo_url(p.image_url):
-                results.append(
-                    {
-                        "type": "photo",
-                        "id": p.id,
-                        "photo_url": p.image_url,
-                        "thumbnail_url": p.image_url,
-                        "title": p.title,
-                        "description": self.format_price(p.price),
-                        "caption": caption,
-                        "parse_mode": "HTML",
-                        "reply_markup": {"inline_keyboard": [[buy_btn]]},
-                    }
-                )
+                result_item = {
+                    "type": "photo",
+                    "id": p.id,
+                    "photo_url": p.image_url,
+                    "thumbnail_url": p.image_url,
+                    "title": p.title,
+                    "description": self.format_price(p.price),
+                    "caption": caption,
+                    "parse_mode": "HTML",
+                }
             else:
-                results.append(
-                    {
-                        "type": "article",
-                        "id": p.id,
-                        "title": p.title,
-                        "description": self.format_price(p.price),
-                        "input_message_content": {
-                            "message_text": caption,
-                            "parse_mode": "HTML",
-                        },
-                        "reply_markup": {"inline_keyboard": [[buy_btn]]},
-                    }
-                )
+                result_item = {
+                    "type": "article",
+                    "id": p.id,
+                    "title": p.title,
+                    "description": self.format_price(p.price),
+                    "input_message_content": {
+                        "message_text": caption,
+                        "parse_mode": "HTML",
+                    },
+                }
+            if markup:
+                result_item["reply_markup"] = markup
+            results.append(result_item)
 
         await self.api_call(
             "answerInlineQuery",

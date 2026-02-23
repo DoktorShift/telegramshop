@@ -58,6 +58,8 @@ class CreateShop(BaseModel):
     shipping_flat_rate: float = 0
     shipping_free_threshold: float = 0
     shipping_per_kg: float = 0
+    include_tags: Optional[str] = None
+    omit_tags: Optional[str] = None
 
 
 class Shop(CreateShop):
@@ -86,6 +88,8 @@ class ShopResponse(BaseModel):
     shipping_flat_rate: float = 0
     shipping_free_threshold: float = 0
     shipping_per_kg: float = 0
+    include_tags: Optional[str] = None
+    omit_tags: Optional[str] = None
     is_enabled: bool = False
     timestamp: str
     bot_username: Optional[str] = None
@@ -111,6 +115,7 @@ class Order(BaseModel):
     buyer_name: Optional[str] = None
     buyer_address: Optional[str] = None
     has_physical_items: bool = False
+    credit_used: int = 0
     status: str = "pending"
     fulfillment_status: Optional[str] = None
     fulfillment_note: Optional[str] = None
