@@ -167,6 +167,14 @@ async def set_shop_enabled(shop_id: str, enabled: bool) -> None:
     )
 
 
+async def update_shop_currency(shop_id: str, currency: str) -> None:
+    """Sync shop currency from inventory."""
+    await db.execute(
+        "UPDATE telegramshop.shops SET currency = :currency WHERE id = :id",
+        {"id": shop_id, "currency": currency},
+    )
+
+
 async def ensure_webhook_secret(shop_id: str) -> str:
     """Generate and store a webhook_secret if one doesn't exist."""
     secret = secrets.token_hex(32)

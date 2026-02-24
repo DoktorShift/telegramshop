@@ -125,9 +125,11 @@ async def fetch_inventory_products(
     user_id: str,
     include_tags: Optional[str] = None,
     omit_tags: Optional[str] = None,
-) -> List[ShopProduct]:
+) -> Tuple[List[ShopProduct], str]:
     """
     Fetch products from the Inventory extension, honouring omit_tags.
+
+    Returns (products, currency) where currency is the inventory's currency.
 
     1. Fetch the inventory's omit_tags (exclusion filter).
     2. Fetch all active, approved items via the paginated endpoint.
@@ -303,7 +305,7 @@ async def fetch_inventory_products(
             )
         products = filtered
 
-    return products
+    return products, inv.currency
 
 
 async def deduct_inventory_stock(

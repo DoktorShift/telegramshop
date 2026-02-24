@@ -167,12 +167,17 @@ class TelegramBot:
 
     async def refresh_products(self) -> None:
         try:
-            self.products = await fetch_inventory_products(
+            self.products, inv_currency = await fetch_inventory_products(
                 self.shop.inventory_id,
                 self.user_id,
                 include_tags=self.shop.include_tags,
                 omit_tags=self.shop.omit_tags,
             )
+            # Sync shop currency from inventory
+            if inv_currency and inv_currency != self.shop.currency:
+                self.shop.currency = inv_currency
+                from .crud import update_shop_currency
+                await update_shop_currency(self.shop.id, inv_currency)
             active = [p for p in self.products if not p.disabled]
             logger.info(
                 f"Loaded {len(active)} products for shop '{self.shop.title}'"

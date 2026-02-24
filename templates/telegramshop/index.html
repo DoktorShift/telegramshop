@@ -1914,24 +1914,7 @@
 
       <q-separator class="q-mb-lg" style="opacity: 0.3"></q-separator>
 
-      <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">
-        Pricing Currency
-      </div>
-      <div class="text-caption text-grey q-mb-sm">
-        Customers always pay in sats. If you choose a fiat currency,
-        prices convert automatically at checkout.
-      </div>
-      <q-select
-        v-model="shopDialog.data.currency"
-        :options="currencies"
-        emit-value map-options filled
-        label="Display Currency"
-        style="max-width: 280px"
-      >
-        <template v-slot:prepend>
-          <q-icon name="paid" color="grey-7" size="sm"></q-icon>
-        </template>
-      </q-select>
+      <!-- Currency is synced automatically from Inventory -->
 
       <!-- Product Tag Filters -->
       <template v-if="availableTags.length > 0">
