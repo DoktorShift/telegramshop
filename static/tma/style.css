@@ -829,6 +829,15 @@ a { color: var(--tg-theme-link-color, #2481cc); text-decoration: none; }
   font-size: 14px;
 }
 
+.buyer-info {
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 12px 0;
+}
+.buyer-row {
+  color: var(--tg-theme-text-color, #333);
+}
+
 .order-date-full {
   font-size: 13px;
   color: var(--tg-theme-hint-color, #999);

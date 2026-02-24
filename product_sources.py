@@ -230,12 +230,15 @@ async def fetch_inventory_products(
 
         category = tags[0] if tags else None
 
-        # Determine shipping requirement
+        # Shipping requirement — commented out until Inventory extension
+        # supports explicit physical/digital product distinction.
+        # weight = item.get("weight_grams") or 0
+        # has_physical_tag = any(
+        #     t.lower() in ("physical", "shipping") for t in tags
+        # )
+        # requires_shipping = weight > 0 or has_physical_tag
+        requires_shipping = False
         weight = item.get("weight_grams") or 0
-        has_physical_tag = any(
-            t.lower() in ("physical", "shipping") for t in tags
-        )
-        requires_shipping = weight > 0 or has_physical_tag
 
         # Apply inventory-level defaults for tax and discount
         item_tax = (

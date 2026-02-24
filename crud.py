@@ -726,14 +726,12 @@ async def restore_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
 
 
 async def get_expired_pending_orders(older_than_minutes: int = 20) -> list[Order]:
-    from datetime import datetime, timedelta, timezone
+    import time
 
-    cutoff = (
-        datetime.now(timezone.utc) - timedelta(minutes=older_than_minutes)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    cutoff = int(time.time()) - (older_than_minutes * 60)
     rows = await db.fetchall(
         """SELECT * FROM telegramshop.orders
-           WHERE status = 'pending' AND timestamp < :cutoff""",
+           WHERE status = 'pending' AND CAST(timestamp AS INTEGER) < :cutoff""",
         {"cutoff": cutoff},
     )
     return [Order(**dict(row)) for row in rows]

@@ -1912,28 +1912,6 @@
         </div>
       </q-banner>
 
-      <q-banner
-        v-if="activeOmitTags.length > 0"
-        dense rounded
-        class="info-banner info-banner--info q-mb-md"
-      >
-        <template v-slot:avatar>
-          <q-icon name="filter_alt"></q-icon>
-        </template>
-        <div class="text-body2">
-          <b>Filter active</b> &mdash; Products tagged
-          <q-badge
-            v-for="tag in activeOmitTags"
-            :key="tag"
-            color="blue-3"
-            text-color="blue-9"
-            class="q-mx-xs"
-            :label="tag"
-          ></q-badge>
-          are excluded (managed in Inventory settings).
-        </div>
-      </q-banner>
-
       <q-separator class="q-mb-lg" style="opacity: 0.3"></q-separator>
 
       <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">

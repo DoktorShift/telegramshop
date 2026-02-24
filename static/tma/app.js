@@ -672,9 +672,6 @@ const TMA = {
         : '+' + product.tax_rate + '% tax'
       metaHtml += '<span class="meta-tag">' + taxLabel + '</span>'
     }
-    if (product.requires_shipping) {
-      metaHtml += '<span class="meta-tag">\ud83d\ude9a Shipping required</span>'
-    }
     metaHtml += '</div>'
 
     // Check if already in cart
@@ -1102,13 +1099,6 @@ const TMA = {
   },
 
   // ===== Checkout Flow =====
-  _cartHasPhysical() {
-    return this.cart.some(item => {
-      const p = this.products.find(pr => pr.id === item.product_id)
-      return p && p.requires_shipping
-    })
-  },
-
   startCheckout() {
     if (!this.authenticated) {
       this.showToast('Please open from Telegram')
@@ -1116,7 +1106,7 @@ const TMA = {
     }
     if (this.cart.length === 0) return
 
-    if (this.checkoutMode === 'none' && !this._cartHasPhysical()) {
+    if (this.checkoutMode === 'none') {
       this.submitCheckout({})
     } else {
       this.navigate('#/checkout')
@@ -1125,9 +1115,8 @@ const TMA = {
 
   renderCheckout() {
     const container = document.getElementById('checkout-content')
-    const hasPhysical = this._cartHasPhysical()
     const needsEmail = this.checkoutMode === 'email' || this.checkoutMode === 'address'
-    const needsAddress = this.checkoutMode === 'address' || hasPhysical
+    const needsAddress = this.checkoutMode === 'address'
 
     // Order summary at top
     const total = this.cartTotal()
@@ -1217,7 +1206,7 @@ const TMA = {
     const emailEl = document.getElementById('checkout-email')
     if (emailEl) body.buyer_email = emailEl.value
 
-    if (this.checkoutMode === 'address' || this._cartHasPhysical()) {
+    if (this.checkoutMode === 'address') {
       body.buyer_name = (document.getElementById('checkout-name') || {}).value || ''
       const parts = [
         (document.getElementById('checkout-street') || {}).value || '',
@@ -1626,6 +1615,22 @@ const TMA = {
         '<span>Total paid</span>' +
         '<span>' + order.amount_sats.toLocaleString() + ' sats</span>' +
         '</div></div>'
+
+      // Buyer info
+      if (order.buyer_email || order.buyer_name || order.buyer_address) {
+        html += '<div class="section-label mt-md">Your info</div>' +
+          '<div class="buyer-info">'
+        if (order.buyer_email) {
+          html += '<div class="buyer-row">\ud83d\udce7 ' + this.escapeHtml(order.buyer_email) + '</div>'
+        }
+        if (order.buyer_name) {
+          html += '<div class="buyer-row">\ud83d\udc64 ' + this.escapeHtml(order.buyer_name) + '</div>'
+        }
+        if (order.buyer_address) {
+          html += '<div class="buyer-row">\ud83d\udccd ' + this.escapeHtml(order.buyer_address).replace(/\n/g, '<br>') + '</div>'
+        }
+        html += '</div>'
+      }
 
       html += '<div class="order-date-full">Placed ' + this.formatDate(order.timestamp) + '</div>'
 
@@ -2064,7 +2069,14 @@ const TMA = {
 
   formatDate(val) {
     if (!val) return ''
-    const d = new Date(val.includes('T') || val.includes('Z') ? val : val + 'Z')
+    let d
+    if (/^\d{9,13}$/.test(String(val))) {
+      // Unix epoch (seconds or milliseconds)
+      const n = Number(val)
+      d = new Date(n < 1e12 ? n * 1000 : n)
+    } else {
+      d = new Date(String(val).includes('T') || String(val).includes('Z') ? val : val + 'Z')
+    }
     if (isNaN(d.getTime())) return ''
     const now = new Date()
     const diff = now - d
