@@ -355,11 +355,12 @@ async def push_order_to_orders(
     memo: Optional[str],
     order: "Order",
     shop: "Shop",
-) -> None:
+) -> Optional[str]:
     """
     Push an order to the Orders extension after payment.
 
     Follows TPoS pattern: fire-and-forget POST to /orders/api/v1/orders.
+    Returns the Orders extension's order ID if successful, None otherwise.
     """
     import json
     import re
@@ -415,15 +416,53 @@ async def push_order_to_orders(
                 json=payload,
             )
             if resp.status_code in (200, 201):
+                data = resp.json()
+                ext_id = data.get("id")
                 logger.info(
                     f"Pushed order {order.id} to Orders extension"
+                    f" (ext_id={ext_id})"
                 )
+                return ext_id
             else:
                 logger.warning(
                     f"Orders push failed ({resp.status_code}): {resp.text}"
                 )
     except Exception as e:
         logger.warning(f"Failed to push order to Orders extension: {e}")
+    return None
+
+
+async def sync_orders_shipped(
+    user_id: str, orders_ext_id: str, shipped: bool = True
+) -> None:
+    """
+    Sync fulfillment status to the Orders extension's shipped flag.
+
+    Mapping: preparing=false, shipping=true, delivered=true.
+    """
+    token = _internal_token(user_id)
+    url = _internal_url(
+        f"/orders/api/v1/orders/{orders_ext_id}/shipping"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.put(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                json={"shipped": shipped},
+            )
+            if resp.status_code in (200, 201):
+                logger.info(
+                    f"Synced shipped={shipped} for Orders ext {orders_ext_id}"
+                )
+            else:
+                logger.warning(
+                    f"Orders shipped sync failed ({resp.status_code}): "
+                    f"{resp.text}"
+                )
+    except Exception as e:
+        logger.warning(f"Failed to sync shipped to Orders extension: {e}")
 
 
 def get_cached_image(img_id: str) -> Optional[bytes]:

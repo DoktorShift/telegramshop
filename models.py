@@ -118,6 +118,7 @@ class Order(BaseModel):
     buyer_address: Optional[str] = None
     has_physical_items: bool = False
     credit_used: int = 0
+    orders_ext_id: Optional[str] = None
     status: str = "pending"
     fulfillment_status: Optional[str] = None
     fulfillment_note: Optional[str] = None

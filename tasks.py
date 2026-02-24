@@ -25,6 +25,7 @@ from .crud import (
     update_order_status,
 )
 from .models import Commercial, Customer, Shop
+from .crud import set_order_ext_id
 from .product_sources import deduct_inventory_stock, push_order_to_orders
 from .telegram import TelegramBot, _safe_err
 
@@ -143,7 +144,7 @@ async def maybe_push_order(payment, order, shop) -> None:
     if "orders" not in active_extensions:
         return
 
-    await push_order_to_orders(
+    ext_id = await push_order_to_orders(
         user_id=wallet.user,
         payment_hash=payment.payment_hash,
         checking_id=payment.checking_id,
@@ -153,6 +154,8 @@ async def maybe_push_order(payment, order, shop) -> None:
         order=order,
         shop=shop,
     )
+    if ext_id:
+        await set_order_ext_id(order.id, ext_id)
 
 
 async def wait_for_paid_invoices() -> None:

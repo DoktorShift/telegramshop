@@ -356,7 +356,7 @@ const TMA = {
   route() {
     const hash = window.location.hash || '#/'
     const parts = hash.split('/')
-    const route = parts[1] || ''
+    const route = (parts[1] || '').split('?')[0]
 
     // Stop any active polling when navigating away
     this._stopPolling()

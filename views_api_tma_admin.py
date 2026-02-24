@@ -38,6 +38,7 @@ from .crud import (
     update_return_status,
 )
 from .models import (
+    FulfillmentStatus,
     Shop,
     TmaAdminApproveReturn,
     TmaAdminAuthResponse,
@@ -46,6 +47,7 @@ from .models import (
     TmaAdminReply,
     TmaUser,
 )
+from .product_sources import sync_orders_shipped
 from .tasks import bot_manager
 from .tma_auth import validate_init_data
 
@@ -257,6 +259,21 @@ async def tma_admin_update_fulfillment(
             )
         except Exception as e:
             logger.warning(f"Admin TMA: Failed to notify customer: {e}")
+
+    # Sync shipped status to Orders extension
+    if order.orders_ext_id and shop.forward_to_orders:
+        shipped = data.status in (
+            FulfillmentStatus.SHIPPING, FulfillmentStatus.DELIVERED
+        )
+        try:
+            from lnbits.core.crud import get_wallet
+            wallet = await get_wallet(shop.wallet)
+            if wallet:
+                await sync_orders_shipped(
+                    wallet.user, order.orders_ext_id, shipped
+                )
+        except Exception as e:
+            logger.warning(f"Orders shipped sync failed: {e}")
 
     return {"success": True, "fulfillment_status": data.status.value}
 

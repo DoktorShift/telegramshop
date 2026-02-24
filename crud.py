@@ -420,6 +420,14 @@ async def update_order_status(order_id: str, status: str) -> None:
     )
 
 
+async def set_order_ext_id(order_id: str, orders_ext_id: str) -> None:
+    """Store the Orders extension's order ID on our order."""
+    await db.execute(
+        "UPDATE telegramshop.orders SET orders_ext_id = :ext_id WHERE id = :id",
+        {"id": order_id, "ext_id": orders_ext_id},
+    )
+
+
 async def update_order_fulfillment(
     order_id: str,
     fulfillment_status: str,
