@@ -1679,10 +1679,10 @@ const TMA = {
 
       // Action buttons
       html += '<div class="order-actions mt-md">'
+      html += '<button class="btn-secondary" onclick="TMA.navigate(\'#/messages?order=' + order.id + '\')">Message about this order</button>'
       if (this.allowReturns && order.status === 'paid' && orderReturns.length === 0) {
-        html += '<button class="btn-secondary" onclick="TMA.navigate(\'#/return/' + order.id + '\')">Request return</button>'
+        html += '<button class="btn-text mt-sm" onclick="TMA.navigate(\'#/return/' + order.id + '\')">Request return</button>'
       }
-      html += '<button class="btn-text mt-sm" onclick="TMA.navigate(\'#/messages?order=' + order.id + '\')">Message about this order</button>'
       html += '</div></div>'
 
       container.innerHTML = html
