@@ -1375,7 +1375,8 @@ window.app = Vue.createApp({
         shipping_free_threshold: 0,
         shipping_per_kg: 0,
         include_tags: [],
-        omit_tags: []
+        omit_tags: [],
+        forward_to_orders: false
       }
     }
   },
