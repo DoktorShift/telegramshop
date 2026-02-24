@@ -554,7 +554,7 @@ class TelegramBot:
                     "text": "🛍 View Product",
                     "url": (
                         f"https://t.me/{self._bot_username}"
-                        f"?startapp=product_{p.id}"
+                        f"?start=product_{p.id}"
                     ),
                 }
             else:
