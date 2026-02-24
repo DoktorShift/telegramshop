@@ -121,7 +121,10 @@ async def fetch_inventory_settings(
 
 
 async def fetch_inventory_products(
-    inventory_id: str, user_id: str
+    inventory_id: str,
+    user_id: str,
+    include_tags: Optional[str] = None,
+    omit_tags: Optional[str] = None,
 ) -> List[ShopProduct]:
     """
     Fetch products from the Inventory extension, honouring omit_tags.
@@ -275,6 +278,28 @@ async def fetch_inventory_products(
             f"Omit filter: excluded {skipped} item(s) "
             f"matching tags {inv.omit_tags}"
         )
+
+    # Shop-level tag filtering
+    shop_include = set(_parse_csv_tags(include_tags))
+    shop_omit = set(_parse_csv_tags(omit_tags))
+
+    if shop_include or shop_omit:
+        filtered = []
+        for p in products:
+            p_tags = {t.lower() for t in p.tags}
+            if shop_include and not p_tags.intersection(shop_include):
+                continue
+            if shop_omit and p_tags.intersection(shop_omit):
+                continue
+            filtered.append(p)
+        shop_filtered = len(products) - len(filtered)
+        if shop_filtered > 0:
+            logger.info(
+                f"Shop tag filter: excluded {shop_filtered} item(s) "
+                f"(include={list(shop_include)}, omit={list(shop_omit)})"
+            )
+        products = filtered
+
     return products
 
 
