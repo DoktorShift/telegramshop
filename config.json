@@ -14,8 +14,8 @@
     }
   ],
   "images": [],
-  "description_md": "https://raw.githubusercontent.com/DoktorShift/telegram_shop_lnbits/main/description.md",
-  "terms_and_conditions_md": "https://raw.githubusercontent.com/DoktorShift/telegram_shop_lnbits/main/toc.md",
+  "description_md": "https://raw.githubusercontent.com/DoktorShift/telegramshop/main/description.md",
+  "terms_and_conditions_md": "https://raw.githubusercontent.com/DoktorShift/telegramshop/main/toc.md",
   "license": "MIT",
   "paid_features": "",
   "tags": ["Telegram", "Shopping", "E-Commerce", "Lightning", "Inventory"],

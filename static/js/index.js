@@ -62,13 +62,9 @@ window.app = Vue.createApp({
         orderId: null
       },
       _threadPollTimer: null,
-      fulfillmentDialog: {
-        show: false,
-        order: null,
-        status: '',
-        statusLabel: '',
-        note: ''
-      },
+      fulfillmentPendingOrder: null,
+      fulfillmentPendingStatus: null,
+      fulfillmentPendingNote: '',
       broadcastDialog: {show: false, sending: false},
       // Reply
       replyText: '',
@@ -343,6 +339,10 @@ window.app = Vue.createApp({
   },
 
   computed: {
+    fulfillmentPendingLabel() {
+      const labels = {preparing: 'Preparing', shipping: 'Shipping', delivered: 'Delivered'}
+      return labels[this.fulfillmentPendingStatus] || ''
+    },
     promotionPreview() {
       const promo = this.commercials.find(cm => cm.type === 'promotion') || null
       const content = promo && promo.content ? promo.content : null
@@ -829,42 +829,82 @@ window.app = Vue.createApp({
       return shop && shop.enable_order_tracking
     },
 
-    updateFulfillment(order, status) {
-      const labels = {
-        preparing: 'Preparing',
-        shipping: 'Shipping',
-        delivered: 'Delivered'
+    selectFulfillmentStep(order, status) {
+      if (this.fulfillmentPendingOrder === order.id && this.fulfillmentPendingStatus === status) {
+        this.cancelFulfillmentStep()
+        return
       }
-      this.fulfillmentDialog.order = order
-      this.fulfillmentDialog.status = status
-      this.fulfillmentDialog.statusLabel = labels[status]
-      this.fulfillmentDialog.note = ''
-      this.fulfillmentDialog.show = true
+      this.fulfillmentPendingOrder = order.id
+      this.fulfillmentPendingStatus = status
+      this.fulfillmentPendingNote = ''
     },
 
-    async confirmFulfillment() {
+    cancelFulfillmentStep() {
+      this.fulfillmentPendingOrder = null
+      this.fulfillmentPendingStatus = null
+      this.fulfillmentPendingNote = ''
+    },
+
+    async confirmFulfillmentStep() {
       try {
-        const order = this.fulfillmentDialog.order
+        const order = this.orders.find(o => o.id === this.fulfillmentPendingOrder)
+        if (!order) return
         const wallet = this._walletForShopId(order.shop_id)
         await LNbits.api.request(
           'PUT',
-          `/telegramshop/api/v1/order/${this.fulfillmentDialog.order.id}/fulfillment`,
+          `/telegramshop/api/v1/order/${order.id}/fulfillment`,
           wallet.adminkey,
           {
-            status: this.fulfillmentDialog.status,
-            note: this.fulfillmentDialog.note || null
+            status: this.fulfillmentPendingStatus,
+            note: this.fulfillmentPendingNote || null
           }
         )
         this.$q.notify({
           type: 'positive',
           message: 'Fulfillment updated'
         })
-        this.fulfillmentDialog.show = false
+        this.cancelFulfillmentStep()
         await this.loadOrders()
         this.loadStats()
       } catch (e) {
         LNbits.utils.notifyApiError(e)
       }
+    },
+
+    fulfillmentStepState(order, stepValue) {
+      const steps = ['preparing', 'shipping', 'delivered']
+      const currentIdx = steps.indexOf(order.fulfillment_status)
+      const stepIdx = steps.indexOf(stepValue)
+      if (stepIdx < currentIdx) return 'done'
+      if (stepIdx === currentIdx) return 'active'
+      return 'pending'
+    },
+
+    fulfillmentStepColor(order, stepValue) {
+      const state = this.fulfillmentStepState(order, stepValue)
+      const colors = {
+        preparing: 'orange',
+        shipping: 'blue',
+        delivered: 'green'
+      }
+      if (state === 'active') return colors[stepValue] || 'primary'
+      if (state === 'done') return colors[stepValue] || 'primary'
+      return 'grey-4'
+    },
+
+    fulfillmentStepIcon(stepValue) {
+      const icons = {
+        preparing: 'inventory_2',
+        shipping: 'local_shipping',
+        delivered: 'check_circle'
+      }
+      return icons[stepValue] || 'circle'
+    },
+
+    fulfillmentLineColor(order, idx) {
+      const steps = ['preparing', 'shipping', 'delivered']
+      const currentIdx = steps.indexOf(order.fulfillment_status)
+      return idx < currentIdx ? '#1976d2' : 'rgba(128,128,128,0.2)'
     },
 
     // --- Messages ---

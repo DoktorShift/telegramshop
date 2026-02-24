@@ -339,3 +339,36 @@ class TmaUser(BaseModel):
     chat_id: int
     username: Optional[str] = None
     first_name: Optional[str] = None
+
+
+# --- TMA Admin Request/Response Models ---
+
+
+class TmaAdminAuthResponse(BaseModel):
+    chat_id: int
+    username: Optional[str] = None
+    shop_id: str
+    shop_title: str
+    shop_currency: str
+    enable_order_tracking: bool = False
+    allow_returns: bool = True
+
+
+class TmaAdminReply(BaseModel):
+    chat_id: int
+    content: str
+    order_id: Optional[str] = None
+
+
+class TmaAdminFulfillment(BaseModel):
+    status: FulfillmentStatus
+    note: Optional[str] = None
+
+
+class TmaAdminApproveReturn(BaseModel):
+    refund_method: RefundMethod
+    refund_amount_sats: Optional[int] = None
+
+
+class TmaAdminDenyReturn(BaseModel):
+    admin_note: str
