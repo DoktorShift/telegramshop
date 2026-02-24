@@ -6,7 +6,6 @@ Customers open a **Telegram Mini App** — a native-feeling storefront embedded 
 
 Products live in the [Inventory](https://github.com/lnbits/inventory) extension. One catalog, multiple sales channels.
 
----
 
 ## Features
 
@@ -51,19 +50,17 @@ Products live in the [Inventory](https://github.com/lnbits/inventory) extension.
 - Create, configure, and run a shop entirely through API calls
 - Agent guide and ready-made system prompt included — see [docs/ai](docs/ai/)
 
----
 
 ## Quick start
 
 1. Install the **Inventory** extension in LNbits and add your products
 2. Install **Telegram Shopping**
-3. Create a bot via [@BotFather](https://t.me/BotFather) — copy the token
-4. Create a shop in the extension: paste the token, pick a wallet, select your inventory
-5. Toggle the shop on — your bot goes live
+3. Create a bot via [@BotFather](https://t.me/BotFather) - copy the token
+4. Create a shop in the extension: paste the token, follow the setup
+5. Toggle the shop on! Then your bot goes live
 
-> Use **polling** mode for development (no public URL needed). Switch to **webhook** for production.
+> Use **polling** mode for development (no public URL needed). Consider switch to **webhook** for production.
 
----
 
 ## Bot commands
 
@@ -73,7 +70,6 @@ The bot registers a single command. All customer interaction happens in the Mini
 |---------|-------------|
 | `/start` | Welcome message with an "Open Shop" button that launches the Mini App |
 
----
 
 ## Deep links
 
@@ -85,7 +81,6 @@ https://t.me/yourbotname?start=product_PRODUCT_ID
 
 Use these for QR codes at events, social media posts, pinned group messages, or anywhere you want one-tap access to a specific product.
 
----
 
 ## Inline mode
 
@@ -97,7 +92,6 @@ Customers can share products in any Telegram chat. Type `@yourbotname` followed 
 
 Great for word-of-mouth: customers share products with friends without leaving their current conversation.
 
----
 
 ## Configuration
 
@@ -111,16 +105,12 @@ Great for word-of-mouth: customers share products with friends without leaving t
 | **Delivery** | Webhook (production) or polling (development) |
 | **Admin chat ID** | Personal notifications for orders, messages, returns |
 
----
 
 ## Requirements
 
 - LNbits **1.4.0+**
 - [Inventory extension](https://github.com/lnbits/inventory)
-- No external Python dependencies — ships with everything LNbits provides
-- SQLite or PostgreSQL
 
----
 
 ## Documentation
 
@@ -131,9 +121,3 @@ Full docs with setup guides, configuration reference, and AI integration:
 - [Telegram Mini App](docs/guide/telegram-mini-app.md)
 - [Marketing campaigns](docs/guide/commercials.md)
 - [AI agent guide](docs/ai/agent-readme.md)
-
----
-
-## License
-
-MIT

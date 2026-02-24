@@ -8,6 +8,7 @@ from .tasks import wait_for_paid_invoices, start_all_bots, stop_all_bots, run_co
 from .views import telegramshop_generic_router
 from .views_api import telegramshop_api_router
 from .views_api_tma import tma_api_router
+from .views_api_tma_admin import tma_admin_api_router
 
 scheduled_tasks: list[asyncio.Task] = []
 
@@ -24,6 +25,7 @@ telegramshop_ext: APIRouter = APIRouter(
 telegramshop_ext.include_router(telegramshop_generic_router)
 telegramshop_ext.include_router(telegramshop_api_router)
 telegramshop_ext.include_router(tma_api_router)
+telegramshop_ext.include_router(tma_admin_api_router)
 
 
 def telegramshop_stop():

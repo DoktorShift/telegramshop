@@ -971,13 +971,33 @@ a { color: var(--tg-theme-link-color, #2481cc); text-decoration: none; }
   border-radius: var(--tma-radius-sm);
 }
 
+/* Messages screen: flex layout to pin input at bottom */
+#screen-messages {
+  display: none;
+  padding: var(--tma-pad);
+  animation: fadeIn 0.2s ease;
+}
+#screen-messages.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(var(--tg-viewport-stable-height, 100vh) - 72px - var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+}
+#screen-messages .section-title { flex-shrink: 0; }
+#screen-messages #messages-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .message-thread {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: calc(var(--tg-viewport-stable-height, 100vh) - 240px);
+  flex: 1;
   overflow-y: auto;
   padding-bottom: 8px;
+  min-height: 0;
 }
 
 .message-bubble {
@@ -1018,7 +1038,8 @@ a { color: var(--tg-theme-link-color, #2481cc); text-decoration: none; }
   gap: 8px;
   padding-top: 10px;
   border-top: 1px solid var(--tg-theme-section-separator-color, var(--tg-theme-secondary-bg-color, #eee));
-  margin-top: 8px;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 .message-input { flex: 1; }
 

@@ -916,29 +916,107 @@
                       </div>
                     </div>
                   </div>
-                  <div v-if="props.row.fulfillment_note" class="q-mt-sm text-body2">
+                  <div v-if="props.row.fulfillment_note && !canTrackFulfillment(props.row)" class="q-mt-sm text-body2">
                     <span class="text-weight-medium">Note:</span>
                     {% raw %}{{ props.row.fulfillment_note }}{% endraw %}
                   </div>
-                  <!-- Fulfillment actions -->
+                  <!-- Fulfillment stepper -->
                   <div v-if="canTrackFulfillment(props.row)" class="q-mt-md">
-                    <div class="custom_seperator q-mb-sm"></div>
-                    <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.6">
-                      Fulfillment
+                    <div class="custom_seperator q-mb-md"></div>
+                    <div
+                      class="fulfillment-stepper q-pa-md"
+                      style="background: rgba(128,128,128,0.04); border-radius: 8px"
+                    >
+                      <div class="text-subtitle2 text-weight-bold q-mb-md">
+                        Order Fulfillment
+                      </div>
+                      <!-- Step circles + connecting lines -->
+                      <div class="row items-center justify-center q-mb-sm" style="gap: 0">
+                        <template v-for="(fs, idx) in fulfillmentOptions">
+                          <div
+                            :key="fs.value"
+                            class="column items-center cursor-pointer"
+                            style="min-width: 90px; position: relative"
+                            @click="selectFulfillmentStep(props.row, fs.value)"
+                          >
+                            <q-avatar
+                              :size="fulfillmentStepState(props.row, fs.value) === 'active' ? '44px' : '38px'"
+                              :color="fulfillmentStepColor(props.row, fs.value)"
+                              :text-color="fulfillmentStepState(props.row, fs.value) !== 'pending' ? 'white' : undefined"
+                              :class="fulfillmentStepState(props.row, fs.value) === 'active' ? 'shadow-2' : ''"
+                              :style="fulfillmentStepState(props.row, fs.value) === 'pending' ? 'opacity: 0.35' : ''"
+                            >
+                              <q-icon
+                                :name="fulfillmentStepIcon(fs.value)"
+                                :size="fulfillmentStepState(props.row, fs.value) === 'active' ? '22px' : '18px'"
+                              ></q-icon>
+                            </q-avatar>
+                            <div
+                              class="text-center q-mt-xs"
+                              :class="fulfillmentStepState(props.row, fs.value) === 'active' ? 'text-weight-bold text-body2' : 'text-caption'"
+                              :style="fulfillmentStepState(props.row, fs.value) === 'pending' ? 'opacity: 0.4' : ''"
+                            >
+                              {% raw %}{{ fs.label }}{% endraw %}
+                            </div>
+                            <q-badge
+                              v-if="fulfillmentPendingStatus === fs.value && fulfillmentPendingOrder === props.row.id"
+                              color="primary"
+                              floating
+                              rounded
+                              label="next"
+                              style="font-size: 9px; top: -4px; right: 14px"
+                            ></q-badge>
+                          </div>
+                          <div
+                            v-if="idx < fulfillmentOptions.length - 1"
+                            :key="fs.value + '-line'"
+                            style="flex: 1; max-width: 60px; height: 3px; border-radius: 2px; margin-bottom: 22px"
+                            :style="{
+                              background: fulfillmentLineColor(props.row, idx)
+                            }"
+                          ></div>
+                        </template>
+                      </div>
+                      <!-- Current note display -->
+                      <div v-if="props.row.fulfillment_note" class="q-mt-sm q-mb-sm text-body2 text-center" style="opacity: 0.7">
+                        <q-icon name="sticky_note_2" size="14px" class="q-mr-xs"></q-icon>
+                        {% raw %}{{ props.row.fulfillment_note }}{% endraw %}
+                      </div>
+                      <!-- Inline note + confirm (shown when a step is selected) -->
+                      <div
+                        v-if="fulfillmentPendingOrder === props.row.id && fulfillmentPendingStatus"
+                        class="q-mt-md"
+                      >
+                        <q-input
+                          v-model="fulfillmentPendingNote"
+                          filled
+                          dense
+                          label="Add a note (optional, e.g. tracking number)"
+                          type="textarea"
+                          rows="2"
+                          class="q-mb-sm"
+                        ></q-input>
+                        <div class="row justify-end q-gutter-sm">
+                          <q-btn
+                            flat
+                            dense
+                            no-caps
+                            color="grey"
+                            label="Cancel"
+                            @click="cancelFulfillmentStep"
+                          ></q-btn>
+                          <q-btn
+                            unelevated
+                            no-caps
+                            color="primary"
+                            class="avatar_style"
+                            :label="'Update to ' + fulfillmentPendingLabel"
+                            icon-right="arrow_forward"
+                            @click="confirmFulfillmentStep"
+                          ></q-btn>
+                        </div>
+                      </div>
                     </div>
-                    <q-btn-group unelevated>
-                      <q-btn
-                        v-for="fs in fulfillmentOptions"
-                        :key="fs.value"
-                        :label="fs.label"
-                        :color="props.row.fulfillment_status === fs.value ? 'primary' : undefined"
-                        :flat="props.row.fulfillment_status !== fs.value"
-                        dense
-                        no-caps
-                        size="sm"
-                        @click="updateFulfillment(props.row, fs.value)"
-                     ></q-btn>
-                    </q-btn-group>
                   </div>
                 </div>
               </q-td>
@@ -1704,7 +1782,7 @@
           <q-icon name="open_in_new" size="14px" color="grey"></q-icon>
         </a>
         <a
-          href="https://github.com/DoktorShift/telegram_shop_lnbits"
+          href="https://github.com/DoktorShift/telegramshop"
           target="_blank"
           class="info-link-item"
         >
@@ -2162,6 +2240,26 @@
           </div>
         </div>
 
+        <!-- Orders Extension -->
+        <div class="q-pa-md q-mb-sm" style="background: rgba(128,128,128,0.04); border-radius: 8px">
+          <div class="row items-center no-wrap q-mb-sm">
+            <q-icon name="receipt_long" color="grey-7" size="xs" class="q-mr-sm"></q-icon>
+            <span class="text-body2 text-weight-medium">Orders Extension</span>
+            <q-icon name="help_outline" color="grey-5" size="14px" class="q-ml-xs cursor-pointer">
+              <q-tooltip max-width="280px" class="text-body2">
+                Forward paid orders to the LNbits Orders extension
+                for a unified order ledger across all your extensions.
+                Requires the Orders extension to be installed and enabled.
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <q-toggle
+            v-model="shopDialog.data.forward_to_orders"
+            label="Forward orders to Orders extension"
+            dense
+          ></q-toggle>
+        </div>
+
         <!-- Connection Mode -->
         <div class="q-pa-md" style="background: rgba(128,128,128,0.04); border-radius: 8px">
           <div class="row items-center no-wrap q-mb-sm">
@@ -2365,34 +2463,7 @@
   </q-card>
 </q-dialog>
 
-<!-- ====== FULFILLMENT NOTE DIALOG ====== -->
-<q-dialog v-model="fulfillmentDialog.show">
-  <q-card style="width: 400px; max-width: 90vw" class="dialog_style">
-    <q-card-section>
-      <div class="text-h6">
-        {% raw %}{{ fulfillmentDialog.statusLabel }}{% endraw %}
-      </div>
-      <div class="text-caption text-grey">Update fulfillment status</div>
-    </q-card-section>
-    <q-card-section class="q-pt-none">
-      <q-input
-        v-model="fulfillmentDialog.note"
-        filled
-        label="Note (optional, e.g. tracking number)"
-        type="textarea"
-        rows="2"
-     ></q-input>
-    </q-card-section>
-    <q-card-actions align="right" class="q-pa-md q-pt-none">
-      <q-btn flat color="grey" label="Cancel" no-caps v-close-popup></q-btn>
-      <q-btn
-        unelevated color="primary" label="Update" no-caps
-        class="avatar_style"
-        @click="confirmFulfillment"
-     ></q-btn>
-    </q-card-actions>
-  </q-card>
-</q-dialog>
+<!-- Fulfillment dialog removed — now inline stepper -->
 
 <!-- ====== MESSAGE THREAD DIALOG ====== -->
 <q-dialog v-model="threadDialog.show" position="right" full-height>

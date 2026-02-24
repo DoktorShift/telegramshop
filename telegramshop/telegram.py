@@ -49,6 +49,15 @@ class TelegramBot:
             f"index.html?shop={self.shop.id}"
         )
 
+    @property
+    def admin_tma_url(self) -> str:
+        """Admin TMA web app URL for this shop."""
+        base = settings.lnbits_baseurl.rstrip("/")
+        return (
+            f"{base}/telegramshop/static/tma-admin/"
+            f"index.html?shop={self.shop.id}"
+        )
+
     @staticmethod
     def _is_valid_photo_url(url: Optional[str]) -> bool:
         """Return True if *url* can be sent to Telegram as a photo."""
@@ -126,10 +135,26 @@ class TelegramBot:
         return result
 
     async def set_commands(self) -> None:
-        commands = [
-            {"command": "start", "description": "Welcome & open shop"},
-        ]
-        await self.api_call("setMyCommands", commands=commands)
+        # Default commands visible to all users
+        await self.api_call(
+            "setMyCommands",
+            commands=[
+                {"command": "start", "description": "Welcome & open shop"},
+            ],
+        )
+        # Admin-only command, scoped to admin's private chat
+        if self.shop.admin_chat_id:
+            await self.api_call(
+                "setMyCommands",
+                commands=[
+                    {"command": "start", "description": "Welcome & open shop"},
+                    {"command": "admin", "description": "Admin dashboard"},
+                ],
+                scope={
+                    "type": "chat",
+                    "chat_id": int(self.shop.admin_chat_id),
+                },
+            )
 
     # --- Lifecycle ---
 
@@ -145,7 +170,8 @@ class TelegramBot:
         )
 
     async def _set_menu_button(self) -> None:
-        """Set the bot's menu button to open the TMA directly."""
+        """Set the bot's menu button. Admin gets Admin Dashboard, others get Shop."""
+        # Default for all users: Shop
         await self.api_call(
             "setChatMenuButton",
             menu_button={
@@ -154,6 +180,17 @@ class TelegramBot:
                 "web_app": {"url": self.tma_url},
             },
         )
+        # Per-chat override for admin: Admin Dashboard
+        if self.shop.admin_chat_id:
+            await self.api_call(
+                "setChatMenuButton",
+                chat_id=int(self.shop.admin_chat_id),
+                menu_button={
+                    "type": "web_app",
+                    "text": "Admin",
+                    "web_app": {"url": self.admin_tma_url},
+                },
+            )
 
     async def stop(self) -> None:
         self._running = False
@@ -250,6 +287,8 @@ class TelegramBot:
 
         if command == "/start":
             await self.cmd_start(chat_id, args)
+        elif command == "/admin":
+            await self.cmd_admin(chat_id)
 
     async def cmd_start(
         self, chat_id: int, args: Optional[str] = None
@@ -309,8 +348,42 @@ class TelegramBot:
                 },
             ],
         ]
+
+        # Admin gets an extra row with the dashboard button
+        is_admin = (
+            self.shop.admin_chat_id
+            and chat_id == int(self.shop.admin_chat_id)
+        )
+        if is_admin:
+            text += "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"
+            text += "\U0001f6e0 <b>Admin</b>\n"
+            buttons.append([{
+                "text": "\U0001f4ca Admin Dashboard",
+                "web_app": {"url": self.admin_tma_url},
+            }])
+
         keyboard = self._inline_keyboard(buttons)
         await self.send_message(chat_id, text, reply_markup=keyboard)
+
+    async def cmd_admin(self, chat_id: int) -> None:
+        if not self.shop.admin_chat_id:
+            await self.send_message(chat_id, "No admin configured for this shop.")
+            return
+        if chat_id != int(self.shop.admin_chat_id):
+            await self.send_message(chat_id, "You are not authorized as admin.")
+            return
+        keyboard = self._inline_keyboard(
+            [[{
+                "text": "\ud83d\udcca Open Admin Dashboard",
+                "web_app": {"url": self.admin_tma_url},
+            }]]
+        )
+        await self.send_message(
+            chat_id,
+            f"\ud83d\udd27 <b>Admin \u2014 {escape_html(self.shop.title)}</b>\n\n"
+            f"Manage orders, messages, and fulfillment.",
+            reply_markup=keyboard,
+        )
 
     # --- Payment confirmation (called from tasks.py) ---
 
@@ -390,7 +463,13 @@ class TelegramBot:
             text += f"\n👤 {order.buyer_name}"
         if order.buyer_address:
             text += f"\n📍 {order.buyer_address}"
-        await self.send_message(admin_chat_id, text)
+        keyboard = self._inline_keyboard(
+            [[{
+                "text": "\ud83d\udce6 Manage Order",
+                "web_app": {"url": self.admin_tma_url + f"&route=order/{order.id}"},
+            }]]
+        )
+        await self.send_message(admin_chat_id, text, reply_markup=keyboard)
 
     async def notify_admin_message(
         self,
@@ -407,7 +486,13 @@ class TelegramBot:
         if order_id:
             text += f"🧾 Order #{order_id[:8]}\n"
         text += f"\n<i>\"{escape_html(content)}\"</i>"
-        await self.send_message(admin_chat_id, text)
+        keyboard = self._inline_keyboard(
+            [[{
+                "text": "\u2709\ufe0f Reply",
+                "web_app": {"url": self.admin_tma_url + f"&route=thread/{chat_id}"},
+            }]]
+        )
+        await self.send_message(admin_chat_id, text, reply_markup=keyboard)
 
     async def notify_admin_return(self, ret, order: Order) -> None:
         if not self.shop.admin_chat_id:
@@ -430,7 +515,13 @@ class TelegramBot:
             f"💰 Refund: <b>{format_sats(ret.refund_amount_sats)} sats</b>\n"
             f"📝 <i>\"{escape_html(ret.reason or 'No reason given')}\"</i>"
         )
-        await self.send_message(admin_chat_id, text)
+        keyboard = self._inline_keyboard(
+            [[{
+                "text": "\ud83d\udd0d Review Return",
+                "web_app": {"url": self.admin_tma_url + f"&route=order/{order.id}"},
+            }]]
+        )
+        await self.send_message(admin_chat_id, text, reply_markup=keyboard)
 
     # --- Notifications from admin actions ---
 
