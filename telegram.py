@@ -155,7 +155,8 @@ class TelegramBot:
         )
 
     async def _set_menu_button(self) -> None:
-        """Set the bot's menu button to open the TMA directly."""
+        """Set the bot's menu button. Admin gets Admin Dashboard, others get Shop."""
+        # Default for all users: Shop
         await self.api_call(
             "setChatMenuButton",
             menu_button={
@@ -164,6 +165,17 @@ class TelegramBot:
                 "web_app": {"url": self.tma_url},
             },
         )
+        # Per-chat override for admin: Admin Dashboard
+        if self.shop.admin_chat_id:
+            await self.api_call(
+                "setChatMenuButton",
+                chat_id=int(self.shop.admin_chat_id),
+                menu_button={
+                    "type": "web_app",
+                    "text": "Admin",
+                    "web_app": {"url": self.admin_tma_url},
+                },
+            )
 
     async def stop(self) -> None:
         self._running = False
@@ -321,6 +333,20 @@ class TelegramBot:
                 },
             ],
         ]
+
+        # Admin gets an extra row with the dashboard button
+        is_admin = (
+            self.shop.admin_chat_id
+            and chat_id == int(self.shop.admin_chat_id)
+        )
+        if is_admin:
+            text += "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n"
+            text += "\U0001f6e0 <b>Admin</b>\n"
+            buttons.append([{
+                "text": "\U0001f4ca Admin Dashboard",
+                "web_app": {"url": self.admin_tma_url},
+            }])
+
         keyboard = self._inline_keyboard(buttons)
         await self.send_message(chat_id, text, reply_markup=keyboard)
 
