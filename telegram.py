@@ -135,11 +135,26 @@ class TelegramBot:
         return result
 
     async def set_commands(self) -> None:
-        commands = [
-            {"command": "start", "description": "Welcome & open shop"},
-            {"command": "admin", "description": "Admin dashboard"},
-        ]
-        await self.api_call("setMyCommands", commands=commands)
+        # Default commands visible to all users
+        await self.api_call(
+            "setMyCommands",
+            commands=[
+                {"command": "start", "description": "Welcome & open shop"},
+            ],
+        )
+        # Admin-only command, scoped to admin's private chat
+        if self.shop.admin_chat_id:
+            await self.api_call(
+                "setMyCommands",
+                commands=[
+                    {"command": "start", "description": "Welcome & open shop"},
+                    {"command": "admin", "description": "Admin dashboard"},
+                ],
+                scope={
+                    "type": "chat",
+                    "chat_id": int(self.shop.admin_chat_id),
+                },
+            )
 
     # --- Lifecycle ---
 

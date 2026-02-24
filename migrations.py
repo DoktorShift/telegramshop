@@ -221,3 +221,11 @@ async def m007_order_credit_used(db: Database):
         "ALTER TABLE telegramshop.orders "
         "ADD COLUMN credit_used INTEGER NOT NULL DEFAULT 0"
     )
+
+
+async def m008_forward_to_orders(db: Database):
+    """Add toggle to forward paid orders to the Orders extension."""
+    await db.execute(
+        "ALTER TABLE telegramshop.shops "
+        "ADD COLUMN forward_to_orders INTEGER NOT NULL DEFAULT 0"
+    )

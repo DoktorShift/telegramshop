@@ -36,7 +36,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             enable_order_tracking, use_webhook, admin_chat_id,
             allow_returns, allow_credit_refund, return_window_hours,
             shipping_flat_rate, shipping_free_threshold, shipping_per_kg,
-            include_tags, omit_tags,
+            include_tags, omit_tags, forward_to_orders,
             webhook_secret
         ) VALUES (
             :id, :wallet, :title, :description, :bot_token, :currency,
@@ -44,7 +44,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             :enable_order_tracking, :use_webhook, :admin_chat_id,
             :allow_returns, :allow_credit_refund, :return_window_hours,
             :shipping_flat_rate, :shipping_free_threshold, :shipping_per_kg,
-            :include_tags, :omit_tags,
+            :include_tags, :omit_tags, :forward_to_orders,
             :webhook_secret
         )
         """,
@@ -68,6 +68,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             "shipping_per_kg": data.shipping_per_kg,
             "include_tags": data.include_tags,
             "omit_tags": data.omit_tags,
+            "forward_to_orders": int(data.forward_to_orders),
             "webhook_secret": webhook_secret,
         },
     )
@@ -96,7 +97,8 @@ async def update_shop(shop_id: str, data: CreateShop) -> Shop:
             shipping_free_threshold = :shipping_free_threshold,
             shipping_per_kg = :shipping_per_kg,
             include_tags = :include_tags,
-            omit_tags = :omit_tags
+            omit_tags = :omit_tags,
+            forward_to_orders = :forward_to_orders
         WHERE id = :id
         """,
         {
@@ -118,6 +120,7 @@ async def update_shop(shop_id: str, data: CreateShop) -> Shop:
             "shipping_per_kg": data.shipping_per_kg,
             "include_tags": data.include_tags,
             "omit_tags": data.omit_tags,
+            "forward_to_orders": int(data.forward_to_orders),
         },
     )
     shop = await get_shop(shop_id)

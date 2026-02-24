@@ -60,6 +60,7 @@ class CreateShop(BaseModel):
     shipping_per_kg: float = 0
     include_tags: Optional[str] = None
     omit_tags: Optional[str] = None
+    forward_to_orders: bool = False
 
 
 class Shop(CreateShop):
@@ -90,6 +91,7 @@ class ShopResponse(BaseModel):
     shipping_per_kg: float = 0
     include_tags: Optional[str] = None
     omit_tags: Optional[str] = None
+    forward_to_orders: bool = False
     is_enabled: bool = False
     timestamp: str
     bot_username: Optional[str] = None

@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 
 from loguru import logger
 
-from lnbits.core.crud import get_wallet
+from lnbits.core.crud import get_user_active_extensions_ids, get_wallet
 from lnbits.tasks import register_invoice_listener
 
 from .crud import (
@@ -25,7 +25,7 @@ from .crud import (
     update_order_status,
 )
 from .models import Commercial, Customer, Shop
-from .product_sources import deduct_inventory_stock
+from .product_sources import deduct_inventory_stock, push_order_to_orders
 from .telegram import TelegramBot, _safe_err
 
 
@@ -130,6 +130,31 @@ async def stop_all_bots() -> None:
     await bot_manager.stop_all()
 
 
+async def maybe_push_order(payment, order, shop) -> None:
+    """Push order to Orders extension if enabled on shop and active for user."""
+    if not shop.forward_to_orders:
+        return
+
+    wallet = await get_wallet(shop.wallet)
+    if not wallet:
+        return
+
+    active_extensions = await get_user_active_extensions_ids(wallet.user)
+    if "orders" not in active_extensions:
+        return
+
+    await push_order_to_orders(
+        user_id=wallet.user,
+        payment_hash=payment.payment_hash,
+        checking_id=payment.checking_id,
+        amount_msat=payment.amount,
+        fee_msat=payment.fee,
+        memo=payment.memo,
+        order=order,
+        shop=shop,
+    )
+
+
 async def wait_for_paid_invoices() -> None:
     invoice_queue: asyncio.Queue = asyncio.Queue()
     register_invoice_listener(invoice_queue, "ext_telegramshop")
@@ -171,6 +196,13 @@ async def wait_for_paid_invoices() -> None:
                     )
                 except Exception as e:
                     logger.error(f"Stock deduction failed: {e}")
+
+            # Push to Orders extension (fire-and-forget)
+            if bot:
+                try:
+                    await maybe_push_order(payment, order, bot.shop)
+                except Exception as e:
+                    logger.warning(f"Orders push failed: {e}")
 
             # Refresh products to update stock counts
             if bot:

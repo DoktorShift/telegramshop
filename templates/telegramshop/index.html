@@ -2240,6 +2240,26 @@
           </div>
         </div>
 
+        <!-- Orders Extension -->
+        <div class="q-pa-md q-mb-sm" style="background: rgba(128,128,128,0.04); border-radius: 8px">
+          <div class="row items-center no-wrap q-mb-sm">
+            <q-icon name="receipt_long" color="grey-7" size="xs" class="q-mr-sm"></q-icon>
+            <span class="text-body2 text-weight-medium">Orders Extension</span>
+            <q-icon name="help_outline" color="grey-5" size="14px" class="q-ml-xs cursor-pointer">
+              <q-tooltip max-width="280px" class="text-body2">
+                Forward paid orders to the LNbits Orders extension
+                for a unified order ledger across all your extensions.
+                Requires the Orders extension to be installed and enabled.
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <q-toggle
+            v-model="shopDialog.data.forward_to_orders"
+            label="Forward orders to Orders extension"
+            dense
+          ></q-toggle>
+        </div>
+
         <!-- Connection Mode -->
         <div class="q-pa-md" style="background: rgba(128,128,128,0.04); border-radius: 8px">
           <div class="row items-center no-wrap q-mb-sm">
