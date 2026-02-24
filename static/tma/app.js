@@ -2069,7 +2069,14 @@ const TMA = {
 
   formatDate(val) {
     if (!val) return ''
-    const d = new Date(val.includes('T') || val.includes('Z') ? val : val + 'Z')
+    let d
+    if (/^\d{9,13}$/.test(String(val))) {
+      // Unix epoch (seconds or milliseconds)
+      const n = Number(val)
+      d = new Date(n < 1e12 ? n * 1000 : n)
+    } else {
+      d = new Date(String(val).includes('T') || String(val).includes('Z') ? val : val + 'Z')
+    }
     if (isNaN(d.getTime())) return ''
     const now = new Date()
     const diff = now - d

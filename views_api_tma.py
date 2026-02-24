@@ -618,9 +618,15 @@ async def tma_submit_return(
     if shop.return_window_hours > 0:
         from datetime import datetime, timedelta, timezone
 
-        order_time = datetime.fromisoformat(
-            order.timestamp.replace("Z", "+00:00")
-        )
+        ts = order.timestamp
+        try:
+            # Unix epoch (e.g. "1771893044")
+            order_time = datetime.fromtimestamp(int(ts), tz=timezone.utc)
+        except (ValueError, TypeError):
+            # ISO format fallback
+            order_time = datetime.fromisoformat(
+                str(ts).replace("Z", "+00:00")
+            )
         window_end = order_time + timedelta(hours=shop.return_window_hours)
         if datetime.now(timezone.utc) > window_end:
             raise HTTPException(
