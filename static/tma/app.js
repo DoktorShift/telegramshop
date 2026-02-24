@@ -672,9 +672,6 @@ const TMA = {
         : '+' + product.tax_rate + '% tax'
       metaHtml += '<span class="meta-tag">' + taxLabel + '</span>'
     }
-    if (product.requires_shipping) {
-      metaHtml += '<span class="meta-tag">\ud83d\ude9a Shipping required</span>'
-    }
     metaHtml += '</div>'
 
     // Check if already in cart
@@ -1102,13 +1099,6 @@ const TMA = {
   },
 
   // ===== Checkout Flow =====
-  _cartHasPhysical() {
-    return this.cart.some(item => {
-      const p = this.products.find(pr => pr.id === item.product_id)
-      return p && p.requires_shipping
-    })
-  },
-
   startCheckout() {
     if (!this.authenticated) {
       this.showToast('Please open from Telegram')
@@ -1116,7 +1106,7 @@ const TMA = {
     }
     if (this.cart.length === 0) return
 
-    if (this.checkoutMode === 'none' && !this._cartHasPhysical()) {
+    if (this.checkoutMode === 'none') {
       this.submitCheckout({})
     } else {
       this.navigate('#/checkout')
@@ -1125,9 +1115,8 @@ const TMA = {
 
   renderCheckout() {
     const container = document.getElementById('checkout-content')
-    const hasPhysical = this._cartHasPhysical()
     const needsEmail = this.checkoutMode === 'email' || this.checkoutMode === 'address'
-    const needsAddress = this.checkoutMode === 'address' || hasPhysical
+    const needsAddress = this.checkoutMode === 'address'
 
     // Order summary at top
     const total = this.cartTotal()
@@ -1217,7 +1206,7 @@ const TMA = {
     const emailEl = document.getElementById('checkout-email')
     if (emailEl) body.buyer_email = emailEl.value
 
-    if (this.checkoutMode === 'address' || this._cartHasPhysical()) {
+    if (this.checkoutMode === 'address') {
       body.buyer_name = (document.getElementById('checkout-name') || {}).value || ''
       const parts = [
         (document.getElementById('checkout-street') || {}).value || '',
