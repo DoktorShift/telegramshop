@@ -153,7 +153,7 @@ async def tma_get_products(shop_id: str):
         wallet = await get_wallet(shop.wallet)
         if not wallet:
             raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Wallet not found")
-        products = await fetch_inventory_products(
+        products, _ = await fetch_inventory_products(
             shop.inventory_id, wallet.user,
             include_tags=shop.include_tags, omit_tags=shop.omit_tags,
         )
@@ -193,7 +193,7 @@ async def tma_get_product(shop_id: str, product_id: str):
         wallet = await get_wallet(shop.wallet)
         if not wallet:
             raise HTTPException(HTTPStatus.INTERNAL_SERVER_ERROR, "Wallet not found")
-        products = await fetch_inventory_products(
+        products, _ = await fetch_inventory_products(
             shop.inventory_id, wallet.user,
             include_tags=shop.include_tags, omit_tags=shop.omit_tags,
         )
