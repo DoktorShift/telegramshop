@@ -1873,41 +1873,32 @@
     <!-- ===== STEP 2: Products ===== -->
     <div v-show="shopDialog.step === 2" class="q-pa-lg">
       <div class="text-subtitle1 text-weight-medium q-mb-xs">
-        Choose your product inventory
+        Product inventory
       </div>
       <div class="text-caption text-grey q-mb-lg">
-        Products, prices, images, tax, and stock are all managed in the
-        <b>Inventory</b> extension. Pick which inventory to sell from.
+        Products, prices, images, tax, and stock are managed in the
+        <b>Inventory</b> extension.
       </div>
 
-      <q-select
-        v-model="shopDialog.data.inventory_id"
-        :options="inventoryOptions"
-        emit-value map-options filled
-        label="Select Inventory"
-        :loading="inventoryLoading"
-        :rules="[v => !!v || 'Choose an inventory']"
-        class="q-mb-md"
-      >
-        <template v-slot:prepend>
-          <q-icon name="inventory_2" color="grey-7" size="sm"></q-icon>
-        </template>
-        <template v-slot:no-option>
-          <q-item>
-            <q-item-section>
-              <q-item-label class="text-grey">
-                No inventory found
-              </q-item-label>
-              <q-item-label caption>
-                Install the Inventory extension and add products first
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </template>
-      </q-select>
-
+      <!-- Connected inventory confirmation -->
+      <div v-if="inventoryLoading" class="q-mb-md">
+        <q-spinner color="primary" size="sm" class="q-mr-sm"></q-spinner>
+        <span class="text-grey">Checking inventory&hellip;</span>
+      </div>
       <q-banner
-        v-if="inventoryError && !inventoryLoading"
+        v-else-if="inventoryName && shopDialog.data.inventory_id"
+        dense rounded
+        class="info-banner info-banner--positive q-mb-md"
+      >
+        <template v-slot:avatar>
+          <q-icon name="check_circle" color="positive"></q-icon>
+        </template>
+        <div class="text-body2">
+          Connected to inventory: <b>{% raw %}{{ inventoryName }}{% endraw %}</b>
+        </div>
+      </q-banner>
+      <q-banner
+        v-else-if="inventoryError && !inventoryLoading"
         dense rounded
         class="info-banner info-banner--warning q-mb-md"
       >
@@ -1917,7 +1908,7 @@
         <div class="text-body2">
           No inventory found. Make sure the
           <b>Inventory extension</b> is installed and you have created
-          at least one inventory with products.
+          an inventory with products.
         </div>
       </q-banner>
 
@@ -1963,6 +1954,49 @@
           <q-icon name="paid" color="grey-7" size="sm"></q-icon>
         </template>
       </q-select>
+
+      <!-- Product Tag Filters -->
+      <template v-if="availableTags.length > 0">
+        <q-separator class="q-my-lg" style="opacity: 0.3"></q-separator>
+
+        <div class="text-caption text-weight-medium text-uppercase q-mb-sm" style="opacity: 0.5; letter-spacing: 0.5px">
+          Product Tag Filters
+        </div>
+        <div class="text-caption text-grey q-mb-md">
+          Control which products from your inventory appear in this shop.
+        </div>
+
+        <q-select
+          v-model="shopDialog.data.include_tags"
+          :options="availableTags"
+          multiple
+          use-chips
+          filled
+          label="Show only products with these tags"
+          hint="Leave empty to show all products"
+          class="q-mb-md"
+          :loading="tagsLoading"
+        >
+          <template v-slot:prepend>
+            <q-icon name="filter_alt" color="grey-7" size="sm"></q-icon>
+          </template>
+        </q-select>
+
+        <q-select
+          v-model="shopDialog.data.omit_tags"
+          :options="availableTags"
+          multiple
+          use-chips
+          filled
+          label="Hide products with these tags"
+          class="q-mb-sm"
+          :loading="tagsLoading"
+        >
+          <template v-slot:prepend>
+            <q-icon name="filter_alt_off" color="grey-7" size="sm"></q-icon>
+          </template>
+        </q-select>
+      </template>
     </div>
 
     <!-- ===== STEP 3: Settings ===== -->

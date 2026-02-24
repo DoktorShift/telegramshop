@@ -687,6 +687,85 @@ async def api_list_inventory_sources(
     return []
 
 
+@telegramshop_api_router.get("/sources/inventory/tags")
+async def api_list_inventory_tags(
+    key_info: WalletTypeInfo = Depends(require_invoice_key),
+) -> dict:
+    """
+    Fetch all unique tags from the user's inventory items.
+    Returns sorted list of tag strings.
+    """
+    from .product_sources import _internal_token, _internal_url, _parse_csv_tags
+
+    user_id = key_info.wallet.user
+
+    # First get inventory to find inventory_id and omit_tags
+    inv_url = _internal_url("/inventory/api/v1")
+    token = _internal_token(user_id)
+    inventory_id = None
+    inv_omit_tags: list[str] = []
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                inv_url,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if resp.status_code == 200:
+                inventory = resp.json()
+                if inventory:
+                    inventory_id = inventory["id"]
+                    inv_omit_tags = _parse_csv_tags(
+                        inventory.get("omit_tags")
+                    )
+    except Exception as e:
+        logger.warning(f"Failed to fetch inventory for tags: {e}")
+
+    if not inventory_id:
+        return {"tags": [], "omit_tags": []}
+
+    # Fetch all active+approved items and collect tags
+    items_url = _internal_url(
+        f"/inventory/api/v1/items/{inventory_id}/paginated"
+    )
+    all_tags: set[str] = set()
+    offset = 0
+    limit = 50
+    token = _internal_token(user_id)
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            while True:
+                resp = await client.get(
+                    items_url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    params={
+                        "limit": limit,
+                        "offset": offset,
+                        "is_active": True,
+                        "is_approved": True,
+                    },
+                )
+                resp.raise_for_status()
+                page = resp.json()
+                items = page.get("data", [])
+                for item in items:
+                    tags_str = item.get("tags") or ""
+                    for t in tags_str.split(","):
+                        t = t.strip()
+                        if t:
+                            all_tags.add(t)
+                total = page.get("total", 0)
+                offset += limit
+                if offset >= total or not items:
+                    break
+    except Exception as e:
+        logger.warning(f"Failed to fetch inventory items for tags: {e}")
+
+    return {
+        "tags": sorted(all_tags, key=str.lower),
+        "omit_tags": inv_omit_tags,
+    }
+
+
 @telegramshop_api_router.get("/image/{image_id}")
 async def api_proxy_image(image_id: str) -> Response:
     data = get_cached_image(image_id)
