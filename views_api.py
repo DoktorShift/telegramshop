@@ -62,7 +62,7 @@ from .models import (
     TestToken,
     FulfillmentStatus,
 )
-from .product_sources import get_cached_image
+from .product_sources import get_cached_image, sync_orders_shipped
 from .tasks import bot_manager
 
 telegramshop_api_router = APIRouter(prefix="/api/v1")
@@ -280,6 +280,21 @@ async def api_update_fulfillment(
         await bot.notify_fulfillment_update(
             order.telegram_chat_id, order, data.status.value, data.note
         )
+
+    # Sync shipped status to Orders extension
+    if order.orders_ext_id and shop.forward_to_orders:
+        shipped = data.status in (
+            FulfillmentStatus.SHIPPING, FulfillmentStatus.DELIVERED
+        )
+        try:
+            from lnbits.core.crud import get_wallet
+            wallet = await get_wallet(shop.wallet)
+            if wallet:
+                await sync_orders_shipped(
+                    wallet.user, order.orders_ext_id, shipped
+                )
+        except Exception as e:
+            logger.warning(f"Orders shipped sync failed: {e}")
 
     return {"success": True}
 

@@ -346,6 +346,125 @@ async def deduct_inventory_stock(
             )
 
 
+async def push_order_to_orders(
+    user_id: str,
+    payment_hash: str,
+    checking_id: str,
+    amount_msat: int,
+    fee_msat: int,
+    memo: Optional[str],
+    order: "Order",
+    shop: "Shop",
+) -> Optional[str]:
+    """
+    Push an order to the Orders extension after payment.
+
+    Follows TPoS pattern: fire-and-forget POST to /orders/api/v1/orders.
+    Returns the Orders extension's order ID if successful, None otherwise.
+    """
+    import json
+    import re
+
+    cart_items = json.loads(order.cart_json)
+    items = [
+        {
+            "title": item.get("title", "Item"),
+            "quantity": item.get("quantity", 1),
+            "price": item.get("price", 0),
+            "sku": item.get("sku"),
+            "weight_grams": item.get("weight_grams", 0),
+        }
+        for item in cart_items
+    ]
+
+    # Orders extension validates email with EmailStr — only send if valid
+    email = order.buyer_email
+    if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        email = None
+
+    is_fiat = order.currency != "sat" and order.currency_amount > 0
+
+    payload = {
+        "source": "telegramshop",
+        "payment_hash": payment_hash,
+        "checking_id": checking_id,
+        "amount_msat": amount_msat,
+        "fee_msat": fee_msat,
+        "memo": memo,
+        "currency": order.currency if is_fiat else None,
+        "exchange_rate": (
+            (order.amount_sats / order.currency_amount) if is_fiat else None
+        ),
+        "fiat_currency": order.currency if is_fiat else None,
+        "fiat_amount": order.currency_amount if is_fiat else None,
+        "items": items,
+        "address": order.buyer_address,
+        "email": email,
+        "paid": True,
+        "shipped": False,
+        "created_at": order.timestamp,
+    }
+
+    token = _internal_token(user_id)
+    url = _internal_url("/orders/api/v1/orders")
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                json=payload,
+            )
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                ext_id = data.get("id")
+                logger.info(
+                    f"Pushed order {order.id} to Orders extension"
+                    f" (ext_id={ext_id})"
+                )
+                return ext_id
+            else:
+                logger.warning(
+                    f"Orders push failed ({resp.status_code}): {resp.text}"
+                )
+    except Exception as e:
+        logger.warning(f"Failed to push order to Orders extension: {e}")
+    return None
+
+
+async def sync_orders_shipped(
+    user_id: str, orders_ext_id: str, shipped: bool = True
+) -> None:
+    """
+    Sync fulfillment status to the Orders extension's shipped flag.
+
+    Mapping: preparing=false, shipping=true, delivered=true.
+    """
+    token = _internal_token(user_id)
+    url = _internal_url(
+        f"/orders/api/v1/orders/{orders_ext_id}/shipping"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.put(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                json={"shipped": shipped},
+            )
+            if resp.status_code in (200, 201):
+                logger.info(
+                    f"Synced shipped={shipped} for Orders ext {orders_ext_id}"
+                )
+            else:
+                logger.warning(
+                    f"Orders shipped sync failed ({resp.status_code}): "
+                    f"{resp.text}"
+                )
+    except Exception as e:
+        logger.warning(f"Failed to sync shipped to Orders extension: {e}")
+
+
 def get_cached_image(img_id: str) -> Optional[bytes]:
     return _image_cache.get(img_id)
 

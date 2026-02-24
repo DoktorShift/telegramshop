@@ -36,7 +36,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             enable_order_tracking, use_webhook, admin_chat_id,
             allow_returns, allow_credit_refund, return_window_hours,
             shipping_flat_rate, shipping_free_threshold, shipping_per_kg,
-            include_tags, omit_tags,
+            include_tags, omit_tags, forward_to_orders,
             webhook_secret
         ) VALUES (
             :id, :wallet, :title, :description, :bot_token, :currency,
@@ -44,7 +44,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             :enable_order_tracking, :use_webhook, :admin_chat_id,
             :allow_returns, :allow_credit_refund, :return_window_hours,
             :shipping_flat_rate, :shipping_free_threshold, :shipping_per_kg,
-            :include_tags, :omit_tags,
+            :include_tags, :omit_tags, :forward_to_orders,
             :webhook_secret
         )
         """,
@@ -68,6 +68,7 @@ async def create_shop(wallet_id: str, data: CreateShop) -> Shop:
             "shipping_per_kg": data.shipping_per_kg,
             "include_tags": data.include_tags,
             "omit_tags": data.omit_tags,
+            "forward_to_orders": int(data.forward_to_orders),
             "webhook_secret": webhook_secret,
         },
     )
@@ -96,7 +97,8 @@ async def update_shop(shop_id: str, data: CreateShop) -> Shop:
             shipping_free_threshold = :shipping_free_threshold,
             shipping_per_kg = :shipping_per_kg,
             include_tags = :include_tags,
-            omit_tags = :omit_tags
+            omit_tags = :omit_tags,
+            forward_to_orders = :forward_to_orders
         WHERE id = :id
         """,
         {
@@ -118,6 +120,7 @@ async def update_shop(shop_id: str, data: CreateShop) -> Shop:
             "shipping_per_kg": data.shipping_per_kg,
             "include_tags": data.include_tags,
             "omit_tags": data.omit_tags,
+            "forward_to_orders": int(data.forward_to_orders),
         },
     )
     shop = await get_shop(shop_id)
@@ -384,10 +387,44 @@ async def get_orders_by_chat(
     return [Order(**dict(row)) for row in rows]
 
 
+async def search_orders(
+    shop_id: str,
+    query: str,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Order]:
+    """Search orders by ID prefix, @username, or email."""
+    q = query.strip().lstrip("#@")
+    if not q:
+        return await get_orders(shop_id, limit=limit, offset=offset)
+    like = f"%{q}%"
+    rows = await db.fetchall(
+        """SELECT * FROM telegramshop.orders
+           WHERE shop_id = :shop_id
+           AND (
+               LOWER(id) LIKE LOWER(:like)
+               OR LOWER(telegram_username) LIKE LOWER(:like)
+               OR LOWER(buyer_email) LIKE LOWER(:like)
+           )
+           ORDER BY timestamp DESC
+           LIMIT :limit OFFSET :offset""",
+        {"shop_id": shop_id, "like": like, "limit": limit, "offset": offset},
+    )
+    return [Order(**dict(row)) for row in rows]
+
+
 async def update_order_status(order_id: str, status: str) -> None:
     await db.execute(
         "UPDATE telegramshop.orders SET status = :status WHERE id = :id",
         {"id": order_id, "status": status},
+    )
+
+
+async def set_order_ext_id(order_id: str, orders_ext_id: str) -> None:
+    """Store the Orders extension's order ID on our order."""
+    await db.execute(
+        "UPDATE telegramshop.orders SET orders_ext_id = :ext_id WHERE id = :id",
+        {"id": order_id, "ext_id": orders_ext_id},
     )
 
 
@@ -493,6 +530,76 @@ async def mark_message_read(message_id: str) -> None:
         "UPDATE telegramshop.messages SET is_read = 1 WHERE id = :id",
         {"id": message_id},
     )
+
+
+async def get_message_conversations(shop_id: str) -> list[dict]:
+    """Group messages by (chat_id, order_id) for conversation list view."""
+    rows = await db.fetchall(
+        """SELECT
+            chat_id,
+            order_id,
+            MAX(username) as username,
+            COUNT(*) as total_count,
+            SUM(CASE WHEN direction = 'in' AND is_read = 0 THEN 1 ELSE 0 END) as unread_count,
+            MAX(timestamp) as last_timestamp
+        FROM telegramshop.messages
+        WHERE shop_id = :shop_id
+        GROUP BY chat_id, order_id
+        ORDER BY MAX(timestamp) DESC""",
+        {"shop_id": shop_id},
+    )
+    conversations = []
+    for row in rows:
+        r = dict(row)
+        chat_id = r["chat_id"]
+        order_id = r.get("order_id")
+        # Fetch last message content for preview
+        last_msg = await db.fetchone(
+            """SELECT content, direction FROM telegramshop.messages
+               WHERE shop_id = :shop_id AND chat_id = :chat_id
+               AND (order_id = :order_id OR (:order_id IS NULL AND order_id IS NULL))
+               ORDER BY timestamp DESC LIMIT 1""",
+            {"shop_id": shop_id, "chat_id": chat_id, "order_id": order_id},
+        )
+        last_content = ""
+        last_direction = "in"
+        if last_msg:
+            last_row = dict(last_msg)
+            last_content = last_row.get("content", "")
+            last_direction = last_row.get("direction", "in")
+        conversations.append({
+            "chat_id": chat_id,
+            "order_id": order_id,
+            "username": r.get("username"),
+            "last_content": last_content,
+            "last_direction": last_direction,
+            "last_timestamp": r.get("last_timestamp"),
+            "unread_count": int(r.get("unread_count") or 0),
+            "total_count": int(r.get("total_count") or 0),
+        })
+    return conversations
+
+
+async def mark_thread_read(
+    shop_id: str, chat_id: int, order_id: Optional[str] = None
+) -> None:
+    """Bulk mark all incoming messages in a thread as read."""
+    if order_id:
+        await db.execute(
+            """UPDATE telegramshop.messages
+               SET is_read = 1
+               WHERE shop_id = :shop_id AND chat_id = :chat_id
+               AND order_id = :order_id AND direction = 'in' AND is_read = 0""",
+            {"shop_id": shop_id, "chat_id": chat_id, "order_id": order_id},
+        )
+    else:
+        await db.execute(
+            """UPDATE telegramshop.messages
+               SET is_read = 1
+               WHERE shop_id = :shop_id AND chat_id = :chat_id
+               AND order_id IS NULL AND direction = 'in' AND is_read = 0""",
+            {"shop_id": shop_id, "chat_id": chat_id},
+        )
 
 
 async def get_unread_count(shop_id: str) -> int:
@@ -849,6 +956,67 @@ async def get_customers(shop_id: str) -> list[Customer]:
         {"shop_id": shop_id},
     )
     return [Customer(**dict(row)) for row in rows]
+
+
+async def get_customer_by_chat(
+    shop_id: str, chat_id: int
+) -> Optional[Customer]:
+    return await db.fetchone(
+        """SELECT * FROM telegramshop.customers
+           WHERE shop_id = :shop_id AND chat_id = :chat_id""",
+        {"shop_id": shop_id, "chat_id": chat_id},
+        Customer,
+    )
+
+
+async def get_message_count_by_chat(shop_id: str, chat_id: int) -> int:
+    row = await db.fetchone(
+        """SELECT COUNT(*) as cnt FROM telegramshop.messages
+           WHERE shop_id = :shop_id AND chat_id = :chat_id""",
+        {"shop_id": shop_id, "chat_id": chat_id},
+    )
+    if row:
+        return int(row.cnt) if hasattr(row, "cnt") else int(row[0])
+    return 0
+
+
+async def get_daily_revenue(
+    shop_ids: list[str], days: int = 7
+) -> list[dict]:
+    """Daily revenue for the last N days, grouped by date."""
+    if not shop_ids:
+        return []
+    from datetime import date, timedelta
+
+    cutoff = (date.today() - timedelta(days=days - 1)).isoformat()
+    placeholders = ", ".join(f":sid{i}" for i in range(len(shop_ids)))
+    params = {f"sid{i}": sid for i, sid in enumerate(shop_ids)}
+    params["cutoff"] = cutoff
+
+    rows = await db.fetchall(
+        f"""SELECT SUBSTR(timestamp, 1, 10) as day,
+                   SUM(amount_sats) as revenue
+            FROM telegramshop.orders
+            WHERE shop_id IN ({placeholders})
+              AND status = 'paid'
+              AND timestamp >= :cutoff
+            GROUP BY SUBSTR(timestamp, 1, 10)
+            ORDER BY day ASC""",
+        params,
+    )
+
+    # Build a dict of day -> revenue
+    rev_map = {}
+    for row in rows:
+        r = dict(row)
+        rev_map[r["day"]] = int(r["revenue"] or 0)
+
+    # Fill in all days (including zero-revenue days)
+    result = []
+    for i in range(days):
+        d = (date.today() - timedelta(days=days - 1 - i)).isoformat()
+        result.append({"date": d, "revenue_sats": rev_map.get(d, 0)})
+    return result
 
 
 async def get_stale_carts(shop_id: str, older_than_minutes: int = 60) -> list[Cart]:

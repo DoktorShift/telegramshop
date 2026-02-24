@@ -60,6 +60,7 @@ class CreateShop(BaseModel):
     shipping_per_kg: float = 0
     include_tags: Optional[str] = None
     omit_tags: Optional[str] = None
+    forward_to_orders: bool = False
 
 
 class Shop(CreateShop):
@@ -90,6 +91,7 @@ class ShopResponse(BaseModel):
     shipping_per_kg: float = 0
     include_tags: Optional[str] = None
     omit_tags: Optional[str] = None
+    forward_to_orders: bool = False
     is_enabled: bool = False
     timestamp: str
     bot_username: Optional[str] = None
@@ -116,6 +118,7 @@ class Order(BaseModel):
     buyer_address: Optional[str] = None
     has_physical_items: bool = False
     credit_used: int = 0
+    orders_ext_id: Optional[str] = None
     status: str = "pending"
     fulfillment_status: Optional[str] = None
     fulfillment_note: Optional[str] = None
@@ -339,3 +342,36 @@ class TmaUser(BaseModel):
     chat_id: int
     username: Optional[str] = None
     first_name: Optional[str] = None
+
+
+# --- TMA Admin Request/Response Models ---
+
+
+class TmaAdminAuthResponse(BaseModel):
+    chat_id: int
+    username: Optional[str] = None
+    shop_id: str
+    shop_title: str
+    shop_currency: str
+    enable_order_tracking: bool = False
+    allow_returns: bool = True
+
+
+class TmaAdminReply(BaseModel):
+    chat_id: int
+    content: str
+    order_id: Optional[str] = None
+
+
+class TmaAdminFulfillment(BaseModel):
+    status: FulfillmentStatus
+    note: Optional[str] = None
+
+
+class TmaAdminApproveReturn(BaseModel):
+    refund_method: RefundMethod
+    refund_amount_sats: Optional[int] = None
+
+
+class TmaAdminDenyReturn(BaseModel):
+    admin_note: str
