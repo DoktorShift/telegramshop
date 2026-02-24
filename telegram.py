@@ -326,6 +326,12 @@ class TelegramBot:
         )
         if credit_used > 0:
             text += f"\n🏷 Credit applied: {format_sats(credit_used)} sats"
+        if order.buyer_email:
+            text += f"\n📧 {escape_html(order.buyer_email)}"
+        if order.buyer_name:
+            text += f"\n👤 {escape_html(order.buyer_name)}"
+        if order.buyer_address:
+            text += f"\n📍 {escape_html(order.buyer_address)}"
 
         tma_url = self.tma_url
         keyboard = self._inline_keyboard(
@@ -375,6 +381,10 @@ class TelegramBot:
         )
         if order.buyer_email:
             text += f"\n📧 {order.buyer_email}"
+        if order.buyer_name:
+            text += f"\n👤 {order.buyer_name}"
+        if order.buyer_address:
+            text += f"\n📍 {order.buyer_address}"
         await self.send_message(admin_chat_id, text)
 
     async def notify_admin_message(

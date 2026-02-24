@@ -1616,6 +1616,22 @@ const TMA = {
         '<span>' + order.amount_sats.toLocaleString() + ' sats</span>' +
         '</div></div>'
 
+      // Buyer info
+      if (order.buyer_email || order.buyer_name || order.buyer_address) {
+        html += '<div class="section-label mt-md">Your info</div>' +
+          '<div class="buyer-info">'
+        if (order.buyer_email) {
+          html += '<div class="buyer-row">\ud83d\udce7 ' + this.escapeHtml(order.buyer_email) + '</div>'
+        }
+        if (order.buyer_name) {
+          html += '<div class="buyer-row">\ud83d\udc64 ' + this.escapeHtml(order.buyer_name) + '</div>'
+        }
+        if (order.buyer_address) {
+          html += '<div class="buyer-row">\ud83d\udccd ' + this.escapeHtml(order.buyer_address).replace(/\n/g, '<br>') + '</div>'
+        }
+        html += '</div>'
+      }
+
       html += '<div class="order-date-full">Placed ' + this.formatDate(order.timestamp) + '</div>'
 
       // Return status for this order

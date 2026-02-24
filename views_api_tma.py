@@ -473,6 +473,9 @@ async def tma_get_orders(
             "fulfillment_status": o.fulfillment_status,
             "fulfillment_note": o.fulfillment_note,
             "timestamp": o.timestamp,
+            "buyer_email": o.buyer_email,
+            "buyer_name": o.buyer_name,
+            "buyer_address": o.buyer_address,
         }
         for o in orders
     ]
