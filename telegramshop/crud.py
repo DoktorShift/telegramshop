@@ -201,6 +201,7 @@ async def get_stats(shop_ids: list[str]) -> dict:
         return {
             "orders_total": 0,
             "orders_paid": 0,
+            "orders_pending": 0,
             "orders_today": 0,
             "revenue_sats": 0,
             "unread_messages": 0,
@@ -213,11 +214,12 @@ async def get_stats(shop_ids: list[str]) -> dict:
     placeholders = ", ".join(f":sid{i}" for i in range(len(shop_ids)))
     params = {f"sid{i}": sid for i, sid in enumerate(shop_ids)}
 
-    # Orders: total, paid, today, revenue
+    # Orders: total, paid, pending, today, revenue
     order_row = await db.fetchone(
         f"""SELECT
             COUNT(*) as total,
             SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
             SUM(CASE WHEN status = 'paid' THEN amount_sats ELSE 0 END) as revenue
         FROM telegramshop.orders
         WHERE shop_id IN ({placeholders})""",
@@ -276,6 +278,7 @@ async def get_stats(shop_ids: list[str]) -> dict:
     return {
         "orders_total": _int(order_row, "total"),
         "orders_paid": _int(order_row, "paid"),
+        "orders_pending": _int(order_row, "pending"),
         "orders_today": _int(today_row, "cnt"),
         "revenue_sats": _int(order_row, "revenue"),
         "unread_messages": _int(msg_row, "unread"),
@@ -380,7 +383,8 @@ async def get_orders_by_chat(
 ) -> list[Order]:
     rows = await db.fetchall(
         """SELECT * FROM telegramshop.orders
-           WHERE shop_id = :shop_id AND telegram_chat_id = :chat_id AND status = 'paid'
+           WHERE shop_id = :shop_id AND telegram_chat_id = :chat_id
+           AND status IN ('paid', 'expired')
            ORDER BY timestamp DESC""",
         {"shop_id": shop_id, "chat_id": chat_id},
     )
@@ -418,6 +422,17 @@ async def update_order_status(order_id: str, status: str) -> None:
         "UPDATE telegramshop.orders SET status = :status WHERE id = :id",
         {"id": order_id, "status": status},
     )
+
+
+async def expire_order_if_pending(order_id: str) -> bool:
+    """Atomically flip status pending→expired. Returns True if flipped."""
+    result = await db.execute(
+        """UPDATE telegramshop.orders
+           SET status = 'expired'
+           WHERE id = :id AND status = 'pending'""",
+        {"id": order_id},
+    )
+    return bool(result and result.rowcount > 0)
 
 
 async def set_order_ext_id(order_id: str, orders_ext_id: str) -> None:
@@ -840,7 +855,7 @@ async def restore_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
     return amount_sats - remaining
 
 
-async def get_expired_pending_orders(older_than_minutes: int = 20) -> list[Order]:
+async def get_expired_pending_orders(older_than_minutes: int = 16) -> list[Order]:
     import time
 
     cutoff = int(time.time()) - (older_than_minutes * 60)
@@ -850,6 +865,37 @@ async def get_expired_pending_orders(older_than_minutes: int = 20) -> list[Order
         {"cutoff": cutoff},
     )
     return [Order(**dict(row)) for row in rows]
+
+
+async def expire_stale_pending_orders(shop_id: str) -> int:
+    """Expire pending orders whose invoice has lapsed. Returns count expired.
+
+    Called on-demand when admin/customer views orders so the response
+    reflects truth.  Uses atomic status flip (pending→expired) to avoid
+    double credit-restore when called concurrently.
+    """
+    import time
+
+    from .models import INVOICE_EXPIRY_SECONDS
+
+    cutoff = int(time.time()) - INVOICE_EXPIRY_SECONDS
+    rows = await db.fetchall(
+        """SELECT * FROM telegramshop.orders
+           WHERE shop_id = :shop_id AND status = 'pending'
+           AND CAST(timestamp AS INTEGER) < :cutoff""",
+        {"shop_id": shop_id, "cutoff": cutoff},
+    )
+    count = 0
+    for row in rows:
+        order = Order(**dict(row))
+        flipped = await expire_order_if_pending(order.id)
+        if flipped:
+            if order.credit_used > 0:
+                await restore_credits(
+                    order.shop_id, order.telegram_chat_id, order.credit_used
+                )
+            count += 1
+    return count
 
 
 async def get_returns_by_chat(shop_id: str, chat_id: int) -> list[Return]:
