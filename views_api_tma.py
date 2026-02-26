@@ -84,17 +84,19 @@ async def pay_redirect(invoice: str = Query(..., min_length=10, max_length=2000)
         "<!DOCTYPE html><html><head>"
         "<meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        "<title>Opening wallet\u2026</title>"
+        "<title>Pay Invoice</title>"
         "<style>body{font-family:system-ui;display:flex;align-items:center;"
         "justify-content:center;height:100vh;margin:0;background:#1a1a2e;"
         "color:#fff;text-align:center}"
         ".wrap{padding:24px}h2{margin:0 0 8px}p{opacity:.6;font-size:14px}"
+        "a.pay{display:inline-block;margin-top:16px;padding:14px 32px;"
+        "background:#f7931a;color:#fff;border-radius:12px;font-size:17px;"
+        "font-weight:600;text-decoration:none}"
         "</style></head><body><div class='wrap'>"
-        "<h2>\u26a1 Opening wallet\u2026</h2>"
-        "<p>If nothing happens, copy the invoice from the shop and paste "
-        "it in your Lightning wallet.</p></div>"
-        f"<script>window.location.href='lightning:{safe}'</script>"
-        "</body></html>"
+        "<h2>\u26a1 Pay Invoice</h2>"
+        "<p>Tap the button below to open your Lightning wallet.</p>"
+        f'<a class="pay" href="lightning:{safe}">Open Wallet</a>'
+        "</div></body></html>"
     )
 
 
