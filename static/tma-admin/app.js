@@ -1,5 +1,7 @@
 /* ===== Admin TMA (Telegram Mini App) SPA ===== */
 
+const INVOICE_EXPIRY_SECONDS = 900
+
 const Admin = {
   // --- State ---
   shopId: null,
@@ -223,7 +225,7 @@ const Admin = {
     const msgBadge = document.getElementById('messages-badge')
     const returnsBadge = document.getElementById('returns-badge')
 
-    const pendingOrders = (this.stats.orders_total || 0) - (this.stats.orders_paid || 0)
+    const pendingOrders = this.stats.orders_pending || 0
     if (ordersBadge) {
       if (pendingOrders > 0) {
         ordersBadge.textContent = pendingOrders
@@ -552,12 +554,22 @@ const Admin = {
     listEl.innerHTML = html
   },
 
+  _effectiveStatus(order) {
+    if (order.status === 'pending') {
+      const ts = parseInt(order.timestamp, 10) || (new Date(order.timestamp).getTime() / 1000)
+      if (Date.now() / 1000 - ts > INVOICE_EXPIRY_SECONDS) return 'expired'
+    }
+    return order.status
+  },
+
   _renderOrderCard(order) {
     const fulfillmentLabels = {
       preparing: '\ud83d\udccb Preparing',
       shipping: '\ud83d\ude9a Shipping',
       delivered: '\u2705 Delivered'
     }
+
+    const displayStatus = this._effectiveStatus(order)
 
     let items = []
     try { items = JSON.parse(order.cart_json) } catch {}
@@ -569,7 +581,7 @@ const Admin = {
     let html = '<div class="order-card" onclick="Admin.navigate(\'#/order/' + order.id + '\')">' +
       '<div class="order-header">' +
       '<span class="order-id">#' + order.id.substring(0, 8) + '</span>' +
-      '<span class="status-badge ' + order.status + '">' + order.status + '</span>' +
+      '<span class="status-badge ' + displayStatus + '">' + displayStatus + '</span>' +
       '</div>' +
       '<div class="order-customer">\ud83d\udc64 ' + this._usernameHtml(order.telegram_username, order.telegram_chat_id) + '</div>' +
       '<div class="order-items-summary">' + this.escapeHtml(itemsSummary) + '</div>' +
@@ -632,11 +644,13 @@ const Admin = {
       let items = []
       try { items = JSON.parse(order.cart_json) } catch {}
 
+      const displayStatus = this._effectiveStatus(order)
+
       let html = '<div class="order-detail">' +
         '<button class="back-link" onclick="Admin.navigate(\'#/orders\')">\u2190 Back to orders</button>' +
         '<div class="order-detail-header">' +
         '<h2>Order #' + order.id.substring(0, 8) + '</h2>' +
-        '<span class="status-badge ' + order.status + '">' + order.status + '</span>' +
+        '<span class="status-badge ' + displayStatus + '">' + displayStatus + '</span>' +
         '</div>'
 
       // Customer info
@@ -655,7 +669,7 @@ const Admin = {
       html += '</div>'
 
       // Fulfillment stepper (only for paid orders with tracking enabled)
-      if (order.status === 'paid' && this.enableOrderTracking) {
+      if (displayStatus === 'paid' && this.enableOrderTracking) {
         html += '<div class="section-label">Fulfillment</div>'
         html += this._renderFulfillmentStepper(order)
       }

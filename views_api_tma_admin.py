@@ -18,6 +18,7 @@ from .helpers import tma_admin_auth_limiter, tma_admin_api_limiter
 from .crud import (
     create_credit,
     create_message,
+    expire_stale_pending_orders,
     get_customer_by_chat,
     get_daily_revenue,
     get_message_conversations,
@@ -143,6 +144,7 @@ async def tma_admin_stats(
     shop = await _get_shop_or_404(shop_id)
     _extract_admin(authorization, shop)
     tma_admin_api_limiter.check(_client_ip(request))
+    await expire_stale_pending_orders(shop_id)
     return await get_stats([shop_id])
 
 
@@ -200,6 +202,9 @@ async def tma_admin_orders(
     shop = await _get_shop_or_404(shop_id)
     _extract_admin(authorization, shop)
     tma_admin_api_limiter.check(_client_ip(request))
+
+    # Expire stale pending orders so the response reflects truth
+    await expire_stale_pending_orders(shop_id)
 
     if q and q.strip():
         orders = await search_orders(shop_id, q, limit=limit, offset=offset)
