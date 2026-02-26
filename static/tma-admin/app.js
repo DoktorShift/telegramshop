@@ -149,7 +149,7 @@ const Admin = {
     } catch (e) {
       console.warn('Auth failed:', e)
       this.authenticated = false
-      this._showAuthError(e.message || 'Authentication failed')
+      this._showAuthError('Could not connect. Please reopen the app.')
     }
   },
 
@@ -268,6 +268,7 @@ const Admin = {
 
     // Stop thread polling when navigating away
     this._stopThreadPoll()
+    this._startStatsRefresh()
 
     window.scrollTo(0, 0)
 
@@ -307,6 +308,7 @@ const Admin = {
         this.setActiveTab('messages')
         break
       case 'thread':
+        this._stopStatsRefresh()
         this.showScreen('thread')
         this.renderThread(parts[2], parts[3] || null)
         break
@@ -318,6 +320,10 @@ const Admin = {
       case 'return':
         this.showScreen('return-detail')
         this.renderReturnDetail(parts[2])
+        break
+      case 'customers':
+        this.showScreen('customers')
+        this.renderCustomers()
         break
       case 'customer':
         this.showScreen('customer')
@@ -355,16 +361,16 @@ const Admin = {
 
     // Primary stat cards (2x2)
     html += '<div class="stats-grid">' +
-      this._statCard('\ud83d\udce6', s.orders_today || 0, 'Orders Today') +
-      this._statCard('\u26a1', this._compactSats(s.revenue_sats || 0) + ' sats', 'Revenue') +
-      this._statCard('\ud83d\udcac', s.unread_messages || 0, 'Unread Msgs') +
-      this._statCard('\u21a9\ufe0f', s.open_returns || 0, 'Open Returns') +
+      this._statCard('\ud83d\udce6', s.orders_today || 0, 'Orders Today', '#/orders') +
+      this._statCard('\u26a1', this._compactSats(s.revenue_sats || 0) + ' sats', 'Revenue', '#/orders') +
+      this._statCard('\ud83d\udcac', s.unread_messages || 0, 'Unread Msgs', '#/messages') +
+      this._statCard('\u21a9\ufe0f', s.open_returns || 0, 'Open Returns', '#/returns') +
       '</div>'
 
     // Additional row
     html += '<div class="stats-row">' +
-      this._statCard('\ud83d\udcca', s.orders_paid || 0, 'Total Orders') +
-      this._statCard('\ud83d\udc65', s.customers || 0, 'Customers') +
+      this._statCard('\ud83d\udcca', s.orders_paid || 0, 'Total Orders', '#/orders') +
+      this._statCard('\ud83d\udc65', s.customers || 0, 'Customers', '#/customers') +
       '</div>'
 
     // Revenue chart placeholder (loaded async)
@@ -445,8 +451,11 @@ const Admin = {
     return String(amount)
   },
 
-  _statCard(icon, value, label) {
-    return '<div class="stat-card">' +
+  _statCard(icon, value, label, href) {
+    const clickAttr = href
+      ? ' style="cursor:pointer" onclick="Admin.haptic(\'selection\');Admin.navigate(\'' + href + '\')"'
+      : ''
+    return '<div class="stat-card"' + clickAttr + '>' +
       '<div class="stat-icon">' + icon + '</div>' +
       '<div class="stat-value">' + value + '</div>' +
       '<div class="stat-label">' + label + '</div>' +
@@ -454,7 +463,7 @@ const Admin = {
   },
 
   _quickAction(icon, text, href) {
-    return '<div class="quick-action" onclick="Admin.navigate(\'' + href + '\')">' +
+    return '<div class="quick-action" onclick="Admin.haptic(\'selection\');Admin.navigate(\'' + href + '\')">' +
       '<div class="quick-action-left">' +
       '<div class="quick-action-icon">' + icon + '</div>' +
       '<div class="quick-action-text">' + this.escapeHtml(text) + '</div>' +
@@ -572,7 +581,7 @@ const Admin = {
     const displayStatus = this._effectiveStatus(order)
 
     let items = []
-    try { items = JSON.parse(order.cart_json) } catch {}
+    try { items = JSON.parse(order.cart_json) } catch (e) { console.warn('Failed to parse cart JSON:', e) }
     const itemsSummary = items.map(i => i.quantity + '\u00d7 ' + i.title).join(', ')
     const customer = order.telegram_username
       ? '@' + order.telegram_username
@@ -624,6 +633,10 @@ const Admin = {
     const chips = document.getElementById('order-filter-chips')
     if (chips) chips.style.display = ''
     this.renderOrders()
+    requestAnimationFrame(() => {
+      const el = document.getElementById('order-search')
+      if (el) el.focus()
+    })
   },
 
   filterOrders(status) {
@@ -642,7 +655,7 @@ const Admin = {
       const order = await this.api('/' + this.shopId + '/orders/' + orderId)
 
       let items = []
-      try { items = JSON.parse(order.cart_json) } catch {}
+      try { items = JSON.parse(order.cart_json) } catch (e) { console.warn('Failed to parse cart JSON:', e) }
 
       const displayStatus = this._effectiveStatus(order)
 
@@ -764,6 +777,7 @@ const Admin = {
   },
 
   async setFulfillment(orderId, status) {
+    this.haptic('selection')
     const noteInput = document.getElementById('fulfillment-note-' + orderId)
     const note = noteInput ? noteInput.value.trim() : null
 
@@ -782,7 +796,7 @@ const Admin = {
       this.renderOrderDetail(orderId)
       this.loadStats()
     } catch (e) {
-      this.showToast('Failed: ' + e.message)
+      this.showToast('Could not update order status. Please try again.')
     }
   },
 
@@ -821,7 +835,7 @@ const Admin = {
           : ''
 
         const hasUnread = conv.unread_count > 0
-        html += '<div class="conversation-card" onclick="Admin.navigate(\'' + threadRoute + '\')">' +
+        html += '<div class="conversation-card" onclick="Admin.haptic(\'selection\');Admin.navigate(\'' + threadRoute + '\')">' +
           '<div class="conversation-avatar">' + this.escapeHtml(initial) + '</div>' +
           '<div class="conversation-info"' + (hasUnread ? ' style="padding-right:36px"' : '') + '>' +
           '<div class="conversation-top">' +
@@ -877,7 +891,7 @@ const Admin = {
       const displayName = username ? '@' + username : 'Chat #' + chatId
       const initial = (username || String(chatId))[0]
 
-      let html = '<button class="back-link" onclick="Admin.navigate(\'#/messages\')">\u2190 Back</button>'
+      let html = '<button class="back-link" onclick="Admin.navigate(\'#/messages\')">\u2190 Back to messages</button>'
 
       // Thread header
       html += '<div class="thread-header">' +
@@ -958,7 +972,12 @@ const Admin = {
     if (!content) return
 
     input.disabled = true
-    if (sendBtn) sendBtn.disabled = true
+    let originalBtnContent = ''
+    if (sendBtn) {
+      sendBtn.disabled = true
+      originalBtnContent = sendBtn.innerHTML
+      sendBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px"></div>'
+    }
     try {
       await this.api('/' + this.shopId + '/messages', {
         method: 'POST',
@@ -966,13 +985,13 @@ const Admin = {
       })
       input.value = ''
       input.disabled = false
-      if (sendBtn) sendBtn.disabled = false
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = originalBtnContent }
       this.haptic('impact', 'light')
       this.renderThread(chatId, orderId)
     } catch (e) {
       input.disabled = false
-      if (sendBtn) sendBtn.disabled = false
-      this.showToast('Failed: ' + e.message)
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = originalBtnContent }
+      this.showToast('Message could not be sent. Please try again.')
     }
   },
 
@@ -1073,7 +1092,7 @@ const Admin = {
         : 'Chat #' + ret.chat_id
 
       let returnItems = []
-      try { returnItems = JSON.parse(ret.items_json) } catch {}
+      try { returnItems = JSON.parse(ret.items_json) } catch (e) { console.warn('Failed to parse items JSON:', e) }
 
       let html = '<div class="return-detail">' +
         '<button class="back-link" onclick="Admin.navigate(\'#/returns\')">\u2190 Back to returns</button>' +
@@ -1086,7 +1105,7 @@ const Admin = {
       html += '<div class="section-label">Order</div>' +
         '<div class="buyer-info">' +
         '<div class="buyer-row">' +
-        '<a onclick="Admin.navigate(\'#/order/' + ret.order_id + '\')" style="cursor:pointer">' +
+        '<a onclick="Admin.haptic(\'selection\');Admin.navigate(\'#/order/' + ret.order_id + '\')" style="cursor:pointer">' +
         '\ud83d\udce6 #' + ret.order_id.substring(0, 8) + '</a>' +
         '</div>' +
         '<div class="buyer-row">\ud83d\udc64 ' + this._usernameHtml(ret.telegram_username, ret.chat_id) + '</div>' +
@@ -1213,7 +1232,7 @@ const Admin = {
       this.renderReturnDetail(returnId)
       this.loadStats()
     } catch (e) {
-      this.showToast('Failed: ' + e.message)
+      this.showToast('Could not approve return. Please try again.')
     }
   },
 
@@ -1240,8 +1259,123 @@ const Admin = {
       this.renderReturnDetail(returnId)
       this.loadStats()
     } catch (e) {
-      this.showToast('Failed: ' + e.message)
+      this.showToast('Could not process denial. Please try again.')
     }
+  },
+
+  // ===== Render: Customers List =====
+  _customerSearchQuery: '',
+  _customerSearchTimer: null,
+
+  async renderCustomers() {
+    const container = document.getElementById('customers-content')
+    const isRerender = !!container.querySelector('#customer-search')
+    if (!isRerender) {
+      container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>'
+    }
+
+    try {
+      let apiPath = '/' + this.shopId + '/customers'
+      if (this._customerSearchQuery) {
+        apiPath += '?q=' + encodeURIComponent(this._customerSearchQuery)
+      }
+
+      const customers = await this.api(apiPath)
+
+      if (isRerender) {
+        this._renderCustomerList(customers)
+        return
+      }
+
+      let html = '<button class="back-link" onclick="window.history.back()">\u2190 Back</button>' +
+        '<h2 class="section-title">Customers</h2>'
+
+      // Search bar
+      html += '<div class="search-bar">' +
+        '<span class="search-icon">\ud83d\udd0d</span>' +
+        '<input type="text" class="form-input" id="customer-search" ' +
+        'placeholder="Search by @username or name\u2026" ' +
+        'value="' + this.escapeHtml(this._customerSearchQuery) + '" ' +
+        'oninput="Admin._onCustomerSearchInput(this.value)" autocomplete="off">' +
+        '<button class="search-clear" id="customer-search-clear-btn" ' +
+        'onclick="Admin._clearCustomerSearch()" style="' +
+        (this._customerSearchQuery ? '' : 'display:none') + '">\u2715</button>' +
+        '</div>'
+
+      html += '<div id="customer-list"></div>'
+      container.innerHTML = html
+      this._renderCustomerList(customers)
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state">' +
+        '<p style="color:var(--tg-theme-destructive-text-color,#e53935)">Failed to load customers</p>' +
+        '<button class="btn-text mt-md" onclick="Admin.renderCustomers()">Try again</button></div>'
+    }
+  },
+
+  _renderCustomerList(customers) {
+    const listEl = document.getElementById('customer-list')
+    if (!listEl) return
+
+    if (customers.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">' +
+        '<div class="empty-icon">\ud83d\udc65</div>' +
+        '<h3>' + (this._customerSearchQuery ? 'No results' : 'No customers yet') + '</h3>' +
+        '<p class="text-hint">' + (this._customerSearchQuery
+          ? 'Try a different search term'
+          : 'Customers will appear here when they interact with your shop') + '</p></div>'
+      return
+    }
+
+    let html = ''
+    customers.forEach(c => {
+      const name = c.first_name || c.username || 'User'
+      const initial = (name[0] || '?').toUpperCase()
+      const displayName = c.first_name || (c.username ? '@' + c.username : 'User ' + c.chat_id)
+      const subtitle = c.username && c.first_name ? '@' + c.username : ''
+      const lastActive = c.last_active ? this.formatDate(c.last_active) : ''
+      const orderCount = c.order_count || 0
+      const totalSpent = c.total_spent_sats || 0
+
+      html += '<div class="customer-list-card" onclick="Admin.haptic(\'selection\');Admin.navigate(\'#/customer/' + c.chat_id + '\')">' +
+        '<div class="customer-list-avatar">' + initial + '</div>' +
+        '<div class="customer-list-info">' +
+        '<div class="customer-list-name">' + this.escapeHtml(displayName) + '</div>' +
+        (subtitle ? '<div class="customer-list-username">' + this.escapeHtml(subtitle) + '</div>' : '') +
+        (lastActive ? '<div class="customer-list-hint">Last active ' + lastActive + '</div>' : '') +
+        '</div>' +
+        '<div class="customer-list-stats">' +
+        '<div class="customer-list-stat-value">' + orderCount + '</div>' +
+        '<div class="customer-list-stat-label">orders</div>' +
+        (totalSpent > 0 ? '<div class="customer-list-stat-sats">' + this._compactSats(totalSpent) + ' sats</div>' : '') +
+        '</div>' +
+        '<div class="order-card-arrow">\u203a</div>' +
+        '</div>'
+    })
+    listEl.innerHTML = html
+  },
+
+  _onCustomerSearchInput(value) {
+    if (this._customerSearchTimer) clearTimeout(this._customerSearchTimer)
+    const clearBtn = document.getElementById('customer-search-clear-btn')
+    if (clearBtn) clearBtn.style.display = value.trim() ? '' : 'none'
+
+    this._customerSearchTimer = setTimeout(() => {
+      this._customerSearchQuery = value.trim()
+      this.renderCustomers()
+    }, 350)
+  },
+
+  _clearCustomerSearch() {
+    this._customerSearchQuery = ''
+    const input = document.getElementById('customer-search')
+    if (input) { input.value = ''; input.focus() }
+    const clearBtn = document.getElementById('customer-search-clear-btn')
+    if (clearBtn) clearBtn.style.display = 'none'
+    this.renderCustomers()
+    requestAnimationFrame(() => {
+      const el = document.getElementById('customer-search')
+      if (el) el.focus()
+    })
   },
 
   // ===== Render: Customer Profile =====
@@ -1298,7 +1432,7 @@ const Admin = {
 
       // Quick actions
       html += '<div class="profile-actions">' +
-        '<button class="btn-secondary" onclick="Admin.navigate(\'#/thread/' + chatId + '\')">' +
+        '<button class="btn-secondary" onclick="Admin.haptic(\'selection\');Admin.navigate(\'#/thread/' + chatId + '\')">' +
         '\ud83d\udcac Message</button>' +
         '</div>'
 
@@ -1307,7 +1441,7 @@ const Admin = {
         html += '<div class="section-label mt-md">Recent Orders</div>'
         profile.recent_orders.forEach(order => {
           let items = []
-          try { items = JSON.parse(order.cart_json) } catch {}
+          try { items = JSON.parse(order.cart_json) } catch (e) { console.warn('Failed to parse cart JSON:', e) }
           const itemsSummary = items.map(i => (i.quantity || 1) + '\u00d7 ' + (i.title || 'Item')).join(', ')
 
           html += '<div class="order-card" onclick="Admin.navigate(\'#/order/' + order.id + '\')">' +
