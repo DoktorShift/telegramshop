@@ -3,6 +3,10 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+# Invoice expiry in seconds — single source of truth.
+# Used by checkout (create_invoice), background cleanup, and frontend countdown.
+INVOICE_EXPIRY_SECONDS = 900
+
 
 class CheckoutMode(str, Enum):
     NONE = "none"

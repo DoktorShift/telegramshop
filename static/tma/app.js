@@ -1,5 +1,7 @@
 /* ===== TMA (Telegram Mini App) SPA ===== */
 
+const INVOICE_EXPIRY_SECONDS = 900
+
 const TMA = {
   // --- State ---
   shopId: null,
@@ -1293,36 +1295,38 @@ const TMA = {
     const bolt11 = result.bolt11 || ''
     const amount = result.amount_sats || 0
 
-    // Generate QR code as SVG
+    // Truncate bolt11 for display: first 12 + ... + last 12
+    const bolt11Short = bolt11.length > 28
+      ? bolt11.slice(0, 12) + '\u2026' + bolt11.slice(-12)
+      : bolt11
+
+    // Generate QR code placeholder
     const qrHtml = bolt11
       ? '<div class="payment-qr" id="payment-qr"></div>'
       : ''
 
     container.innerHTML = '<div class="payment-screen">' +
-      '<div class="payment-icon">\u26a1</div>' +
-      '<h2 class="payment-amount">Pay ' + amount.toLocaleString() + ' sats</h2>' +
-      '<p class="text-hint mb-md">Scan the QR code or copy the invoice</p>' +
+      '<div class="payment-header">' +
+      '<h2 class="payment-amount">\u26a1 ' + amount.toLocaleString() + ' sats</h2>' +
       (result.credit_used > 0
-        ? '<div class="payment-credit">\u2728 Store credit applied: \u2212' + result.credit_used.toLocaleString() + ' sats</div>'
+        ? '<div class="payment-credit">\u2728 Credit applied: \u2212' + result.credit_used.toLocaleString() + ' sats</div>'
         : '') +
+      '</div>' +
       qrHtml +
-      '<div class="payment-bolt11" onclick="TMA.copyBolt11()">' +
-      '<span id="bolt11-text"></span>' +
-      '<div class="bolt11-tap-hint">Tap to copy</div>' +
+      '<div class="payment-actions-row">' +
+      '<button class="btn-tap-to-pay" onclick="TMA.openPayLink()">\u26a1 Pay in Wallet</button>' +
+      '<button class="btn-copy-invoice" onclick="TMA.copyBolt11()">' +
+      '<span class="copy-icon">\ud83d\udccb</span> ' + bolt11Short +
+      '</button>' +
       '</div>' +
-      '<div class="payment-actions">' +
-      '<button class="btn-tap-to-pay" onclick="TMA.openPayLink()">\u26a1 Tap to Pay</button>' +
-      '<button class="btn-secondary mb-sm" onclick="TMA.copyBolt11()">Copy Invoice</button>' +
-      '</div>' +
-      '<p class="text-hint mt-md" style="font-size:12px">Invoice expires in 15 minutes</p>' +
+      '<div class="payment-footer">' +
       '<div class="payment-status" id="payment-status">' +
-      '<div class="spinner" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px"></div>' +
+      '<div class="spinner" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px"></div>' +
       'Waiting for payment\u2026' +
-      '</div></div>'
-
-    // Set bolt11 text safely (no HTML escaping needed)
-    const bolt11El = document.getElementById('bolt11-text')
-    if (bolt11El) bolt11El.textContent = bolt11
+      '</div>' +
+      '<span class="payment-expiry">Expires in 15 min</span>' +
+      '</div>' +
+      '</div>'
 
     // Generate QR code
     if (bolt11) {
@@ -1336,15 +1340,17 @@ const TMA = {
     const container = document.getElementById('payment-qr')
     if (!container) return
 
-    // Use LNbits core QR endpoint (SVG, no external dependency)
-    const size = 220
-    const url = '/api/v1/qrcode/' + encodeURIComponent(data.toUpperCase())
+    // Bare uppercase BOLT11 — uses QR alphanumeric mode (most compact/scannable).
+    // Wallets universally recognise LNBC... without a lightning: prefix.
+    const qrData = data.toUpperCase()
+    const size = 280
+    const url = '/api/v1/qrcode/' + encodeURIComponent(qrData)
     container.innerHTML = '<img src="' + url + '" alt="QR Code" width="' + size +
-      '" height="' + size + '" style="border-radius:12px;background:#fff;padding:8px">'
+      '" height="' + size + '" style="border-radius:12px;background:#fff;padding:12px">'
   },
 
-  copyBolt11(bolt11) {
-    if (!bolt11) bolt11 = this._pendingPayment && this._pendingPayment.bolt11
+  copyBolt11() {
+    const bolt11 = this._pendingPayment && this._pendingPayment.bolt11
     if (!bolt11) return
     navigator.clipboard.writeText(bolt11).then(() => {
       this.showToast('Invoice copied!')
@@ -1363,12 +1369,18 @@ const TMA = {
   openPayLink() {
     const bolt11 = this._pendingPayment && this._pendingPayment.bolt11
     if (!bolt11) return
-    const uri = 'lightning:' + bolt11
+
+    // Telegram WebView blocks custom URI schemes (lightning:).
+    // Open an HTTPS redirect page in the external browser instead.
+    const redirectUrl = window.location.origin +
+      '/telegramshop/api/v1/tma/pay?invoice=' + encodeURIComponent(bolt11)
+
     const tg = window.Telegram && window.Telegram.WebApp
     if (tg && tg.openLink) {
-      tg.openLink(uri)
+      tg.openLink(redirectUrl)
     } else {
-      window.location.href = uri
+      // Fallback for non-TMA context (direct browser access)
+      window.location.href = 'lightning:' + bolt11
     }
   },
 
@@ -1525,16 +1537,30 @@ const TMA = {
         try { items = JSON.parse(order.cart_json) } catch {}
         const itemsSummary = items.map(i => i.quantity + '\u00d7 ' + i.title).join(', ')
 
+        // Client-side expiry detection
+        let displayStatus = order.status
+        if (displayStatus === 'pending') {
+          const ts = parseInt(order.timestamp, 10) || (new Date(order.timestamp).getTime() / 1000)
+          if (Date.now() / 1000 - ts > INVOICE_EXPIRY_SECONDS) displayStatus = 'expired'
+        }
+
+        const isExpired = displayStatus === 'expired'
+
         html += '<div class="order-card" onclick="TMA.navigate(\'#/order/' + order.id + '\')">' +
           '<div class="order-header">' +
           '<span class="order-id">#' + order.id.substring(0, 8) + '</span>' +
-          '<span class="order-status ' + order.status + '">' + order.status + '</span>' +
+          '<span class="order-status ' + displayStatus + '">' +
+            (isExpired ? 'Payment expired' : displayStatus) +
+          '</span>' +
           '</div>' +
           '<div class="order-items">' + this.escapeHtml(itemsSummary) + '</div>' +
           '<div class="order-footer">' +
           '<span class="order-amount">' + order.amount_sats.toLocaleString() + ' sats</span>' +
           '<span class="order-date">' + this.formatDate(order.timestamp) + '</span>' +
           '</div>' +
+          (isExpired
+            ? '<div class="order-expired-hint">Invoice was not paid in time</div>'
+            : '') +
           (order.fulfillment_status
             ? '<div class="order-fulfillment">' +
               (fulfillmentLabels[order.fulfillment_status] || order.fulfillment_status) +
@@ -1582,12 +1608,29 @@ const TMA = {
       let items = []
       try { items = JSON.parse(order.cart_json) } catch {}
 
+      // Client-side expiry detection
+      let displayStatus = order.status
+      if (displayStatus === 'pending') {
+        const ts = parseInt(order.timestamp, 10) || (new Date(order.timestamp).getTime() / 1000)
+        if (Date.now() / 1000 - ts > INVOICE_EXPIRY_SECONDS) displayStatus = 'expired'
+      }
+      const isExpired = displayStatus === 'expired'
+
       let html = '<div class="order-detail">' +
         '<button class="back-link" onclick="TMA.navigate(\'#/orders\')">\u2190 Back to orders</button>' +
         '<div class="order-detail-header">' +
         '<h2>Order #' + order.id.substring(0, 8) + '</h2>' +
-        '<span class="order-status ' + order.status + '">' + order.status + '</span>' +
+        '<span class="order-status ' + displayStatus + '">' +
+          (isExpired ? 'Payment expired' : displayStatus) +
+        '</span>' +
         '</div>'
+
+      if (isExpired) {
+        html += '<div class="expired-notice">' +
+          '<p>The payment invoice expired before it was paid.</p>' +
+          '<button class="btn-secondary" onclick="TMA.navigate(\'#/cart\')">Back to cart</button>' +
+          '</div>'
+      }
 
       // Fulfillment tracking
       if (order.fulfillment_status) {
@@ -1612,7 +1655,7 @@ const TMA = {
 
       html += '<div class="cart-summary">' +
         '<div class="summary-row total">' +
-        '<span>Total paid</span>' +
+        '<span>' + (isExpired ? 'Total (unpaid)' : 'Total paid') + '</span>' +
         '<span>' + order.amount_sats.toLocaleString() + ' sats</span>' +
         '</div></div>'
 

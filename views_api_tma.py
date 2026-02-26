@@ -12,7 +12,8 @@ import json
 from http import HTTPStatus
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Header, Query, Request
+from fastapi.responses import HTMLResponse
 from loguru import logger
 
 from lnbits.core.services import create_invoice
@@ -23,6 +24,7 @@ from .helpers import tma_auth_limiter, tma_api_limiter, tma_checkout_limiter
 
 from .crud import (
     delete_cart,
+    expire_stale_pending_orders,
     get_cart,
     get_order,
     get_orders_by_chat,
@@ -41,6 +43,7 @@ from .crud import (
     use_credits,
 )
 from .models import (
+    INVOICE_EXPIRY_SECONDS,
     CartItem,
     Shop,
     TmaAuthRequest,
@@ -62,6 +65,37 @@ from .tasks import bot_manager
 from .tma_auth import validate_init_data
 
 tma_api_router = APIRouter(prefix="/api/v1/tma")
+
+
+# --- Pay redirect (opens in external browser via tg.openLink) ---
+
+
+@tma_api_router.get("/pay", response_class=HTMLResponse)
+async def pay_redirect(invoice: str = Query(..., min_length=10, max_length=2000)):
+    """Minimal page that triggers the lightning: protocol handler.
+
+    Telegram WebView blocks custom URI schemes, so the TMA opens this
+    HTTPS page via tg.openLink() which launches the external browser
+    where lightning: URIs work normally.
+    """
+    # Sanitise: bolt11 invoices are bech32 (alphanumeric + separators only)
+    safe = "".join(c for c in invoice if c.isalnum() or c in "._-")
+    return HTMLResponse(
+        "<!DOCTYPE html><html><head>"
+        "<meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        "<title>Opening wallet\u2026</title>"
+        "<style>body{font-family:system-ui;display:flex;align-items:center;"
+        "justify-content:center;height:100vh;margin:0;background:#1a1a2e;"
+        "color:#fff;text-align:center}"
+        ".wrap{padding:24px}h2{margin:0 0 8px}p{opacity:.6;font-size:14px}"
+        "</style></head><body><div class='wrap'>"
+        "<h2>\u26a1 Opening wallet\u2026</h2>"
+        "<p>If nothing happens, copy the invoice from the shop and paste "
+        "it in your Lightning wallet.</p></div>"
+        f"<script>window.location.href='lightning:{safe}'</script>"
+        "</body></html>"
+    )
 
 
 # --- Helpers ---
@@ -400,7 +434,7 @@ async def tma_checkout(
             wallet_id=shop.wallet,
             amount=total_sats,
             memo=memo,
-            expiry=900,
+            expiry=INVOICE_EXPIRY_SECONDS,
             extra={
                 "tag": "telegramshop",
                 "shop_id": shop_id,
@@ -461,6 +495,7 @@ async def tma_get_orders(
     shop = await _get_shop_or_404(shop_id)
     user = _extract_tma_user(authorization, shop.bot_token)
     tma_api_limiter.check(_client_ip(request))
+    await expire_stale_pending_orders(shop_id)
     orders = await get_orders_by_chat(shop_id, user.chat_id)
     return [
         {
@@ -495,7 +530,15 @@ async def tma_order_status(
     order = await get_order(order_id)
     if not order or order.telegram_chat_id != user.chat_id:
         raise HTTPException(HTTPStatus.NOT_FOUND, "Order not found")
-    return {"status": order.status}
+
+    status = order.status
+    if status == "pending":
+        import time
+        ts = int(order.timestamp) if order.timestamp.isdigit() else 0
+        if ts and (time.time() - ts > INVOICE_EXPIRY_SECONDS):
+            status = "expired"
+
+    return {"status": status}
 
 
 # --- Credits ---

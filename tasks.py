@@ -10,6 +10,7 @@ from lnbits.tasks import register_invoice_listener
 from .crud import (
     create_message,
     delete_cart,
+    expire_order_if_pending,
     get_cart,
     get_commercials,
     get_customers,
@@ -226,23 +227,29 @@ async def wait_for_paid_invoices() -> None:
 
 
 async def cleanup_expired_orders() -> None:
-    """Restore reserved credits for expired pending orders."""
+    """Restore reserved credits for expired pending orders.
+
+    Threshold: 16 min (invoice expiry 15 min + 1 min buffer).
+    Interval: 60s — worst-case staleness ~2 min.
+    """
     await asyncio.sleep(60)
     while True:
         try:
-            expired = await get_expired_pending_orders(older_than_minutes=20)
+            expired = await get_expired_pending_orders(older_than_minutes=16)
             for order in expired:
+                flipped = await expire_order_if_pending(order.id)
+                if not flipped:
+                    continue  # on-demand handler already expired it
                 if order.credit_used > 0:
                     await restore_credits(
                         order.shop_id, order.telegram_chat_id, order.credit_used
                     )
-                await update_order_status(order.id, "expired")
                 logger.info(
                     f"Expired order {order.id}, restored {order.credit_used} credit sats"
                 )
         except Exception as e:
             logger.error(f"Order cleanup error: {e}")
-        await asyncio.sleep(300)
+        await asyncio.sleep(60)
 
 
 # --- Commercial message builder ---
