@@ -12,13 +12,14 @@
 
     <!-- ===== HOME SCREEN ===== -->
     <div id="screen-home" class="screen active">
-      <div class="welcome-banner" id="welcome-banner" style="display:none">
-        <h2 id="shop-title"></h2>
-        <p id="welcome-text"></p>
+      <div class="credit-strip" id="home-credit-strip" style="display:none" onclick="TMA.navigate('#/credits')">
+        <span class="credit-strip-text" id="home-credit-text"></span>
+        <span class="credit-strip-arrow">&rsaquo;</span>
       </div>
       <div class="search-wrap">
         <input type="text" class="search-bar" id="search-bar"
           placeholder="Search products..." oninput="TMA.handleSearch(this.value)">
+        <button class="search-clear" id="search-clear" onclick="TMA.clearSearch()" style="display:none">&times;</button>
       </div>
       <div class="category-chips" id="category-chips"></div>
       <div class="product-grid" id="product-grid"></div>
@@ -88,20 +89,20 @@
 
     <!-- ===== TAB BAR ===== -->
     <nav class="tab-bar" id="tab-bar">
-      <div class="tab active" data-tab="home" onclick="TMA.navigate('#/')">
+      <div class="tab active" data-tab="home" onclick="TMA.haptic('selection'); TMA.navigate('#/')">
         <span class="tab-icon">&#x1f6cd;</span>
         <span>Shop</span>
       </div>
-      <div class="tab" data-tab="cart" onclick="TMA.navigate('#/cart')">
+      <div class="tab" data-tab="cart" onclick="TMA.haptic('selection'); TMA.navigate('#/cart')">
         <span class="tab-icon">&#x1f6d2;</span>
         <span>Cart</span>
         <span class="tab-badge" id="cart-badge" style="display:none">0</span>
       </div>
-      <div class="tab" data-tab="orders" onclick="TMA.navigate('#/orders')">
+      <div class="tab" data-tab="orders" onclick="TMA.haptic('selection'); TMA.navigate('#/orders')">
         <span class="tab-icon">&#x1f4e6;</span>
         <span>Orders</span>
       </div>
-      <div class="tab" data-tab="messages" onclick="TMA.navigate('#/messages')">
+      <div class="tab" data-tab="messages" onclick="TMA.haptic('selection'); TMA.navigate('#/messages')">
         <span class="tab-icon">&#x1f4ac;</span>
         <span>Messages</span>
       </div>
