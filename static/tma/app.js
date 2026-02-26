@@ -13,7 +13,6 @@ const TMA = {
   shopCurrency: 'sat',
   checkoutMode: 'none',
   allowReturns: false,
-  welcomeText: '',
   products: [],
   cart: [],
   categories: [],
@@ -148,10 +147,12 @@ const TMA = {
       this.username = data.username
       this.botUsername = data.bot_username || null
       this.shopTitle = data.shop_title
+      if (this.shopTitle) {
+        document.title = this.shopTitle
+      }
       this.shopCurrency = data.shop_currency
       this.checkoutMode = data.checkout_mode
       this.allowReturns = data.allow_returns
-      this.welcomeText = data.welcome_text || ''
       this.authenticated = true
       this.loadCredits()
     } catch (e) {
@@ -185,7 +186,7 @@ const TMA = {
       // (for unauthenticated users who can't call /auth)
     } catch (e) {
       this.products = []
-      const container = document.getElementById('products-grid')
+      const container = document.getElementById('product-grid')
       if (container) {
         container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--hint-color)">' +
           '<p>Could not load products</p>' +
@@ -494,13 +495,16 @@ const TMA = {
 
   // ===== Render: Home =====
   renderHome() {
-    const banner = document.getElementById('welcome-banner')
-    const titleEl = document.getElementById('shop-title')
-    const textEl = document.getElementById('welcome-text')
-    if (this.shopTitle) {
-      titleEl.textContent = this.shopTitle
-      textEl.textContent = this.welcomeText || 'Browse and pay with Lightning \u26a1'
-      banner.style.display = ''
+    // Credit strip (only when balance > 0)
+    const creditStrip = document.getElementById('home-credit-strip')
+    const creditText = document.getElementById('home-credit-text')
+    if (creditStrip) {
+      if (this.authenticated && this.creditBalance > 0) {
+        creditText.textContent = '\u2728 ' + this.creditBalance.toLocaleString() + ' sats store credit'
+        creditStrip.style.display = ''
+      } else {
+        creditStrip.style.display = 'none'
+      }
     }
 
     // Search bar
@@ -530,8 +534,24 @@ const TMA = {
     this.renderHome()
   },
 
+  _searchTimer: null,
+
   handleSearch(value) {
-    this.searchQuery = value.trim()
+    const clearBtn = document.getElementById('search-clear')
+    if (clearBtn) clearBtn.style.display = value ? '' : 'none'
+    clearTimeout(this._searchTimer)
+    this._searchTimer = setTimeout(() => {
+      this.searchQuery = value.trim()
+      this.renderProductGrid()
+    }, 300)
+  },
+
+  clearSearch() {
+    const input = document.getElementById('search-bar')
+    if (input) input.value = ''
+    const clearBtn = document.getElementById('search-clear')
+    if (clearBtn) clearBtn.style.display = 'none'
+    this.searchQuery = ''
     this.renderProductGrid()
   },
 
@@ -554,7 +574,8 @@ const TMA = {
       const outOfStock = p.inventory !== null && p.inventory <= 0
       const imgUrl = (p.image_urls && p.image_urls.length > 0) ? p.image_urls[0] : p.image_url
       const imgHtml = imgUrl
-        ? '<img class="product-img" src="' + this.escapeHtml(imgUrl) + '" alt="" loading="lazy">'
+        ? '<img class="product-img" src="' + this.escapeHtml(imgUrl) + '" alt="" loading="lazy"' +
+          ' onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'product-img-placeholder\',textContent:\'\\ud83d\\udce6\'}))">'
         : '<div class="product-img-placeholder">\ud83d\udce6</div>'
 
       // Image count badge for multi-image products
@@ -625,7 +646,8 @@ const TMA = {
       let slidesHtml = ''
       images.forEach((url, i) => {
         slidesHtml += '<div class="gallery-slide">' +
-          '<img src="' + this.escapeHtml(url) + '" alt="" onclick="TMA.openLightbox(' + i + ')">' +
+          '<img src="' + this.escapeHtml(url) + '" alt="" onclick="TMA.openLightbox(' + i + ')"' +
+          ' onerror="this.style.display=\'none\'">' +
           '</div>'
       })
 
@@ -635,8 +657,7 @@ const TMA = {
         images.forEach((_, i) => {
           dotsHtml += '<div class="gallery-dot ' + (i === 0 ? 'active' : '') + '"></div>'
         })
-        dotsHtml += '</div>' +
-          '<div class="gallery-counter">1 / ' + images.length + '</div>'
+        dotsHtml += '</div>'
       }
 
       galleryHtml = '<div class="detail-gallery" id="detail-gallery">' +
@@ -838,12 +859,6 @@ const TMA = {
     document.querySelectorAll('.gallery-dot').forEach((dot, i) => {
       dot.classList.toggle('active', i === this._galleryIndex)
     })
-
-    // Update counter
-    const counter = gallery.querySelector('.gallery-counter')
-    if (counter) {
-      counter.textContent = (this._galleryIndex + 1) + ' / ' + this._galleryImages.length
-    }
   },
 
   // --- Lightbox (fullscreen image viewer) ---
@@ -873,6 +888,7 @@ const TMA = {
       '<div class="lightbox-track" id="lightbox-track">' + slidesHtml + '</div>'
 
     document.body.appendChild(overlay)
+    document.body.style.overflow = 'hidden'
 
     // Tap backdrop to close
     overlay.addEventListener('click', (e) => {
@@ -999,6 +1015,7 @@ const TMA = {
       document.removeEventListener('keydown', this._lightboxKeyHandler)
       this._lightboxKeyHandler = null
     }
+    document.body.style.overflow = ''
     const el = document.getElementById('lightbox')
     if (el) {
       el.classList.remove('visible')
@@ -1039,7 +1056,8 @@ const TMA = {
         ? ((product.image_urls && product.image_urls.length > 0) ? product.image_urls[0] : product.image_url)
         : null
       const imgHtml = imgUrl
-        ? '<img class="cart-item-img" src="' + this.escapeHtml(imgUrl) + '" alt="">'
+        ? '<img class="cart-item-img" src="' + this.escapeHtml(imgUrl) + '" alt=""' +
+          ' onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'cart-item-img-placeholder\',textContent:\'\\ud83d\\udce6\'}))">'
         : '<div class="cart-item-img-placeholder">\ud83d\udce6</div>'
       const lineTotal = item.price * item.quantity
 
@@ -1324,7 +1342,7 @@ const TMA = {
       '<div class="spinner" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px"></div>' +
       'Waiting for payment\u2026' +
       '</div>' +
-      '<span class="payment-expiry">Expires in 15 min</span>' +
+      '<span class="payment-expiry" id="payment-expiry"></span>' +
       '</div>' +
       '</div>'
 
@@ -1333,7 +1351,34 @@ const TMA = {
       this._renderQR(bolt11)
     }
 
+    this._startExpiryCountdown()
     this.pollPayment(result.order_id)
+  },
+
+  _expiryTimer: null,
+  _expiryEnd: null,
+
+  _startExpiryCountdown() {
+    this._stopExpiryCountdown()
+    this._expiryEnd = Date.now() + INVOICE_EXPIRY_SECONDS * 1000
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((this._expiryEnd - Date.now()) / 1000))
+      const el = document.getElementById('payment-expiry')
+      if (!el) { this._stopExpiryCountdown(); return }
+      const min = Math.floor(remaining / 60)
+      const sec = String(remaining % 60).padStart(2, '0')
+      el.textContent = remaining > 0 ? min + ':' + sec + ' left' : 'Expired'
+      if (remaining <= 0) this._stopExpiryCountdown()
+    }
+    tick()
+    this._expiryTimer = setInterval(tick, 1000)
+  },
+
+  _stopExpiryCountdown() {
+    if (this._expiryTimer) {
+      clearInterval(this._expiryTimer)
+      this._expiryTimer = null
+    }
   },
 
   _renderQR(data) {
@@ -1440,6 +1485,7 @@ const TMA = {
       clearTimeout(this._pollTimer)
       this._pollTimer = null
     }
+    this._stopExpiryCountdown()
   },
 
   _msgPollTimer: null,
