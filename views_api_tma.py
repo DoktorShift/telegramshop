@@ -71,31 +71,66 @@ tma_api_router = APIRouter(prefix="/api/v1/tma")
 
 
 @tma_api_router.get("/pay", response_class=HTMLResponse)
-async def pay_redirect(invoice: str = Query(..., min_length=10, max_length=2000)):
-    """Minimal page that triggers the lightning: protocol handler.
+async def pay_redirect(
+    invoice: str = Query(..., min_length=10, max_length=2000),
+    amount: int = Query(0),
+    shop: str = Query(""),
+):
+    """Payment handoff page — user taps to open their Lightning wallet.
 
     Telegram WebView blocks custom URI schemes, so the TMA opens this
     HTTPS page via tg.openLink() which launches the external browser
-    where lightning: URIs work normally.
+    where lightning: URIs work via user-initiated <a> click.
     """
-    # Sanitise: bolt11 invoices are bech32 (alphanumeric + separators only)
     safe = "".join(c for c in invoice if c.isalnum() or c in "._-")
+    safe_shop = "".join(c for c in shop if c.isalnum() or c in " ._-&'")
+
+    amount_html = ""
+    if amount > 0:
+        amount_html = (
+            f'<div class="amount">{amount:,} sats</div>'
+        )
+
+    shop_html = ""
+    if safe_shop:
+        shop_html = f'<div class="shop">{safe_shop}</div>'
+
     return HTMLResponse(
         "<!DOCTYPE html><html><head>"
         "<meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        "<title>Pay Invoice</title>"
-        "<style>body{font-family:system-ui;display:flex;align-items:center;"
-        "justify-content:center;height:100vh;margin:0;background:#1a1a2e;"
-        "color:#fff;text-align:center}"
-        ".wrap{padding:24px}h2{margin:0 0 8px}p{opacity:.6;font-size:14px}"
-        "a.pay{display:inline-block;margin-top:16px;padding:14px 32px;"
-        "background:#f7931a;color:#fff;border-radius:12px;font-size:17px;"
-        "font-weight:600;text-decoration:none}"
-        "</style></head><body><div class='wrap'>"
-        "<h2>\u26a1 Pay Invoice</h2>"
-        "<p>Tap the button below to open your Lightning wallet.</p>"
-        f'<a class="pay" href="lightning:{safe}">Open Wallet</a>'
+        "<title>Lightning Payment</title>"
+        "<style>"
+        "*{box-sizing:border-box}"
+        "body{font-family:-apple-system,system-ui,BlinkMacSystemFont,"
+        "'Segoe UI',sans-serif;display:flex;align-items:center;"
+        "justify-content:center;height:100vh;margin:0;"
+        "background:#0f0f1a;color:#fff}"
+        ".card{background:#1a1a2e;border-radius:20px;padding:32px 28px;"
+        "max-width:360px;width:90%;text-align:center;"
+        "box-shadow:0 8px 32px rgba(0,0,0,.4)}"
+        ".icon{font-size:48px;margin-bottom:12px}"
+        ".shop{font-size:13px;color:#8888aa;margin-bottom:4px;"
+        "text-transform:uppercase;letter-spacing:.5px}"
+        ".amount{font-size:32px;font-weight:700;margin:8px 0 4px;"
+        "font-variant-numeric:tabular-nums}"
+        ".label{font-size:13px;color:#8888aa;margin-bottom:20px}"
+        "a.pay{display:block;padding:16px;background:#f7931a;color:#fff;"
+        "border-radius:14px;font-size:17px;font-weight:600;"
+        "text-decoration:none;transition:transform .1s,opacity .1s}"
+        "a.pay:active{transform:scale(.97);opacity:.9}"
+        ".hint{font-size:12px;color:#555;margin-top:16px;line-height:1.4}"
+        ".powered{font-size:11px;color:#333;margin-top:20px}"
+        "</style></head><body>"
+        "<div class='card'>"
+        "<div class='icon'>\u26a1</div>"
+        f"{shop_html}"
+        f"{amount_html}"
+        '<div class="label">Lightning Network Payment</div>'
+        f'<a class="pay" href="lightning:{safe}">Open Wallet & Pay</a>'
+        "<p class='hint'>Tap the button to open your Lightning wallet "
+        "with the invoice ready to pay.</p>"
+        "<div class='powered'>Powered by LNbits</div>"
         "</div></body></html>"
     )
 
