@@ -53,6 +53,11 @@
       <div id="return-detail-content"></div>
     </div>
 
+    <!-- ===== CUSTOMERS LIST ===== -->
+    <div id="screen-customers" class="screen">
+      <div id="customers-content"></div>
+    </div>
+
     <!-- ===== CUSTOMER PROFILE ===== -->
     <div id="screen-customer" class="screen">
       <div id="customer-content"></div>
@@ -60,21 +65,21 @@
 
     <!-- ===== TAB BAR ===== -->
     <nav class="tab-bar" id="tab-bar">
-      <div class="tab active" data-tab="dashboard" onclick="Admin.navigate('#/')">
+      <div class="tab active" data-tab="dashboard" onclick="Admin.haptic('selection');Admin.navigate('#/')">
         <span class="tab-icon">&#x1f4ca;</span>
         <span>Dashboard</span>
       </div>
-      <div class="tab" data-tab="orders" onclick="Admin.navigate('#/orders')">
+      <div class="tab" data-tab="orders" onclick="Admin.haptic('selection');Admin.navigate('#/orders')">
         <span class="tab-icon">&#x1f4e6;</span>
         <span>Orders</span>
         <span class="tab-badge" id="orders-badge" style="display:none">0</span>
       </div>
-      <div class="tab" data-tab="messages" onclick="Admin.navigate('#/messages')">
+      <div class="tab" data-tab="messages" onclick="Admin.haptic('selection');Admin.navigate('#/messages')">
         <span class="tab-icon">&#x1f4ac;</span>
         <span>Messages</span>
         <span class="tab-badge" id="messages-badge" style="display:none">0</span>
       </div>
-      <div class="tab" data-tab="returns" onclick="Admin.navigate('#/returns')">
+      <div class="tab" data-tab="returns" onclick="Admin.haptic('selection');Admin.navigate('#/returns')">
         <span class="tab-icon">&#x21a9;</span>
         <span>Returns</span>
         <span class="tab-badge" id="returns-badge" style="display:none">0</span>

@@ -1004,6 +1004,37 @@ async def get_customers(shop_id: str) -> list[Customer]:
     return [Customer(**dict(row)) for row in rows]
 
 
+async def get_customers_with_stats(
+    shop_id: str, q: Optional[str] = None
+) -> list[dict]:
+    """Customer list with order_count and total_spent_sats per customer."""
+    params: dict = {"shop_id": shop_id}
+    where_extra = ""
+    if q and q.strip():
+        params["q"] = f"%{q.strip()}%"
+        where_extra = (
+            " AND (c.username LIKE :q OR c.first_name LIKE :q)"
+        )
+
+    rows = await db.fetchall(
+        f"""
+        SELECT c.chat_id, c.username, c.first_name, c.last_active,
+               COALESCE(COUNT(o.id), 0) AS order_count,
+               COALESCE(SUM(o.amount_sats), 0) AS total_spent_sats
+        FROM telegramshop.customers c
+        LEFT JOIN telegramshop.orders o
+            ON o.shop_id = c.shop_id
+            AND o.telegram_chat_id = c.chat_id
+            AND o.status = 'paid'
+        WHERE c.shop_id = :shop_id{where_extra}
+        GROUP BY c.chat_id, c.username, c.first_name, c.last_active
+        ORDER BY c.last_active DESC
+        """,
+        params,
+    )
+    return [dict(row) for row in rows]
+
+
 async def get_customer_by_chat(
     shop_id: str, chat_id: int
 ) -> Optional[Customer]:

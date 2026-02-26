@@ -20,6 +20,7 @@ from .crud import (
     create_message,
     expire_stale_pending_orders,
     get_customer_by_chat,
+    get_customers_with_stats,
     get_daily_revenue,
     get_message_conversations,
     get_message_count_by_chat,
@@ -539,6 +540,23 @@ async def tma_admin_send_reply(
             logger.warning(f"Admin TMA: Failed to send reply: {e}")
 
     return {"id": msg.id, "timestamp": msg.timestamp}
+
+
+# --- Customers list ---
+
+
+@tma_admin_api_router.get("/{shop_id}/customers")
+async def tma_admin_customers(
+    shop_id: str,
+    q: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    """List all customers with order stats."""
+    shop = await _get_shop_or_404(shop_id)
+    _extract_admin(authorization, shop)
+    tma_admin_api_limiter.check(_client_ip(request))
+    return await get_customers_with_stats(shop_id, q)
 
 
 # --- Customer profile ---
