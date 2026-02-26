@@ -1367,20 +1367,38 @@ const TMA = {
   },
 
   openPayLink() {
-    const bolt11 = this._pendingPayment && this._pendingPayment.bolt11
-    if (!bolt11) return
-
-    // Telegram WebView blocks custom URI schemes (lightning:).
-    // Open an HTTPS redirect page in the external browser instead.
-    const redirectUrl = window.location.origin +
-      '/telegramshop/api/v1/tma/pay?invoice=' + encodeURIComponent(bolt11)
+    const p = this._pendingPayment
+    if (!p || !p.bolt11) return
 
     const tg = window.Telegram && window.Telegram.WebApp
-    if (tg && tg.openLink) {
-      tg.openLink(redirectUrl)
+
+    const doOpen = () => {
+      const params = new URLSearchParams({
+        invoice: p.bolt11,
+        amount: String(p.amount_sats || 0),
+        shop: this.shopTitle || '',
+      })
+      const redirectUrl = window.location.origin +
+        '/telegramshop/api/v1/tma/pay?' + params.toString()
+
+      if (tg && tg.openLink) {
+        tg.openLink(redirectUrl)
+      } else {
+        window.location.href = 'lightning:' + p.bolt11
+      }
+    }
+
+    if (tg && tg.showPopup) {
+      tg.showPopup({
+        title: 'Open Lightning Wallet',
+        message: 'You will be redirected to a payment page where you can tap to open your wallet and pay the invoice.',
+        buttons: [
+          { id: 'open', type: 'default', text: 'Continue' },
+          { id: 'cancel', type: 'cancel' },
+        ]
+      }, (id) => { if (id === 'open') doOpen() })
     } else {
-      // Fallback for non-TMA context (direct browser access)
-      window.location.href = 'lightning:' + bolt11
+      doOpen()
     }
   },
 
