@@ -13,7 +13,6 @@ const TMA = {
   shopCurrency: 'sat',
   checkoutMode: 'none',
   allowReturns: false,
-  welcomeText: '',
   products: [],
   cart: [],
   categories: [],
@@ -148,15 +147,12 @@ const TMA = {
       this.username = data.username
       this.botUsername = data.bot_username || null
       this.shopTitle = data.shop_title
-      // Show shop name in Telegram header
-      const tg = window.Telegram && window.Telegram.WebApp
-      if (tg && tg.setHeaderColor && this.shopTitle) {
+      if (this.shopTitle) {
         document.title = this.shopTitle
       }
       this.shopCurrency = data.shop_currency
       this.checkoutMode = data.checkout_mode
       this.allowReturns = data.allow_returns
-      this.welcomeText = data.welcome_text || ''
       this.authenticated = true
       this.loadCredits()
     } catch (e) {
