@@ -23,11 +23,14 @@ from lnbits.settings import settings
 from .helpers import tma_auth_limiter, tma_api_limiter, tma_checkout_limiter
 
 from .crud import (
+    create_stock_reservations,
     delete_cart,
+    delete_stock_reservations,
     expire_stale_pending_orders,
     get_cart,
     get_order,
     get_orders_by_chat,
+    get_reserved_quantity,
     get_returns_by_chat,
     get_shop,
     get_total_available_credit,
@@ -327,7 +330,7 @@ async def tma_update_cart(
     user = _extract_tma_user(authorization, shop.bot_token)
     tma_api_limiter.check(_client_ip(request))
 
-    # Validate items against current stock
+    # Validate items against current stock and enforce catalog prices
     bot = bot_manager.get_bot(shop_id)
     for item in data.items:
         product = bot.get_product_by_id(item.product_id) if bot else None
@@ -342,6 +345,8 @@ async def tma_update_cart(
                     HTTPStatus.BAD_REQUEST,
                     f"Only {product.inventory} of {product.title} available",
                 )
+            # Override client-supplied price with catalog price
+            item.price = product.price
 
     cart_json = json.dumps([item.dict() for item in data.items])
     await upsert_cart(shop_id, user.chat_id, cart_json)
@@ -398,11 +403,16 @@ async def tma_checkout(
 
     cart_items = [CartItem(**item) for item in cart_items_raw]
 
-    # Validate stock before checkout
+    # Validate stock before checkout (accounting for existing reservations)
     bot = bot_manager.get_bot(shop_id)
     products = bot.products if bot else []
+    reserved = {}
     if products:
-        issues = validate_stock(cart_items, products)
+        for item in cart_items:
+            qty = await get_reserved_quantity(shop_id, item.product_id)
+            if qty > 0:
+                reserved[item.product_id] = qty
+        issues = validate_stock(cart_items, products, reserved)
         if issues:
             raise HTTPException(
                 HTTPStatus.CONFLICT, {"stock_issues": issues}
@@ -413,15 +423,16 @@ async def tma_checkout(
     total_sats = await to_sats(total, shop.currency)
     has_physical = cart_has_physical_items(cart_items, products)
 
-    # Apply store credit (reservation)
+    # Apply store credit (atomic reservation)
     credit_used = 0
     available_credit = await get_total_available_credit(shop_id, user.chat_id)
     if available_credit > 0:
-        credit_used = min(available_credit, total_sats)
+        requested = min(available_credit, total_sats)
+        credit_used = await use_credits(shop_id, user.chat_id, requested)
         total_sats -= credit_used
-        await use_credits(shop_id, user.chat_id, credit_used)
 
     cart_json = json.dumps([item.dict() for item in cart_items])
+    stock_items = [(item.product_id, item.quantity) for item in cart_items]
 
     if total_sats <= 0:
         # Fully covered by credit — order is immediately "paid"
@@ -442,6 +453,17 @@ async def tma_checkout(
         )
         await update_order_status(order.id, "paid")
         await delete_cart(shop_id, user.chat_id)
+
+        # Deduct inventory stock (credit-only orders bypass payment listener)
+        if bot:
+            from .product_sources import deduct_inventory_stock
+            try:
+                await deduct_inventory_stock(
+                    bot.shop.inventory_id, stock_items, bot.user_id
+                )
+                await bot.refresh_products()
+            except Exception as e:
+                logger.error(f"Stock deduction failed (credit order): {e}")
 
         # Send confirmation via bot
         if bot:
@@ -503,6 +525,9 @@ async def tma_checkout(
         has_physical_items=has_physical,
         credit_used=credit_used,
     )
+
+    # Reserve stock until payment confirms (released in tasks.py)
+    await create_stock_reservations(order.id, shop_id, stock_items)
 
     # Cart is NOT cleared here — it will be cleared when payment confirms
     # (in tasks.py wait_for_paid_invoices). If payment never arrives,

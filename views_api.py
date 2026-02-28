@@ -1,3 +1,4 @@
+import hmac
 from http import HTTPStatus
 from typing import Optional
 
@@ -635,11 +636,13 @@ async def api_webhook(shop_id: str, request: Request) -> dict:
     if not bot:
         return {"ok": False}
 
-    # Verify Telegram's secret_token header
-    if bot.shop.webhook_secret:
-        token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
-        if token != bot.shop.webhook_secret:
-            return {"ok": False}
+    # Verify Telegram's secret_token header (always required)
+    if not bot.shop.webhook_secret:
+        logger.warning(f"Webhook rejected: shop {shop_id} has no secret")
+        return {"ok": False}
+    token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not hmac.compare_digest(token, bot.shop.webhook_secret):
+        return {"ok": False}
 
     update = await request.json()
     try:

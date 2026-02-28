@@ -461,6 +461,50 @@ async def update_order_fulfillment(
     )
 
 
+# --- Stock Reservations ---
+
+
+async def create_stock_reservations(
+    order_id: str, shop_id: str, items: list
+) -> None:
+    """Reserve stock for an order. Called at checkout time."""
+    for product_id, quantity in items:
+        res_id = urlsafe_short_hash()
+        await db.execute(
+            """INSERT INTO telegramshop.stock_reservations
+               (id, order_id, shop_id, product_id, quantity)
+               VALUES (:id, :order_id, :shop_id, :product_id, :quantity)""",
+            {
+                "id": res_id,
+                "order_id": order_id,
+                "shop_id": shop_id,
+                "product_id": product_id,
+                "quantity": quantity,
+            },
+        )
+
+
+async def delete_stock_reservations(order_id: str) -> None:
+    """Release all stock reservations for an order."""
+    await db.execute(
+        "DELETE FROM telegramshop.stock_reservations WHERE order_id = :order_id",
+        {"order_id": order_id},
+    )
+
+
+async def get_reserved_quantity(shop_id: str, product_id: str) -> int:
+    """Get total reserved quantity for a product across all pending orders."""
+    row = await db.fetchone(
+        """SELECT COALESCE(SUM(quantity), 0) as total
+           FROM telegramshop.stock_reservations
+           WHERE shop_id = :shop_id AND product_id = :product_id""",
+        {"shop_id": shop_id, "product_id": product_id},
+    )
+    if row:
+        return int(row.total) if hasattr(row, "total") else int(row[0])
+    return 0
+
+
 # --- Messages ---
 
 
@@ -809,8 +853,11 @@ async def get_total_available_credit(shop_id: str, chat_id: int) -> int:
 
 async def use_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
     """
-    Apply credits to a purchase. Returns the amount actually deducted.
-    Credits are consumed in FIFO order (oldest first).
+    Atomically apply credits to a purchase (FIFO, oldest first).
+
+    Each credit row is deducted with a conditional UPDATE that guarantees
+    we never exceed the available balance, even under concurrent requests.
+    Returns the amount actually deducted.
     """
     credits = await get_available_credits(shop_id, chat_id)
     remaining = amount_sats
@@ -821,12 +868,16 @@ async def use_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
             break
         available = credit.amount_sats - credit.used_sats
         use = min(available, remaining)
-        await db.execute(
-            "UPDATE telegramshop.credits SET used_sats = used_sats + :use WHERE id = :id",
+        result = await db.execute(
+            """UPDATE telegramshop.credits
+               SET used_sats = used_sats + :use
+               WHERE id = :id
+               AND amount_sats - used_sats >= :use""",
             {"id": credit.id, "use": use},
         )
-        remaining -= use
-        total_used += use
+        if result and result.rowcount > 0:
+            remaining -= use
+            total_used += use
 
     return total_used
 
@@ -890,6 +941,7 @@ async def expire_stale_pending_orders(shop_id: str) -> int:
         order = Order(**dict(row))
         flipped = await expire_order_if_pending(order.id)
         if flipped:
+            await delete_stock_reservations(order.id)
             if order.credit_used > 0:
                 await restore_credits(
                     order.shop_id, order.telegram_chat_id, order.credit_used

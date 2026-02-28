@@ -237,3 +237,23 @@ async def m009_orders_ext_id(db: Database):
         "ALTER TABLE telegramshop.orders "
         "ADD COLUMN orders_ext_id TEXT"
     )
+
+
+async def m010_stock_reservations(db: Database):
+    """Stock reservation table — holds inventory between checkout and payment."""
+    await db.execute(
+        f"""
+        CREATE TABLE telegramshop.stock_reservations (
+            id TEXT NOT NULL PRIMARY KEY,
+            order_id TEXT NOT NULL,
+            shop_id TEXT NOT NULL,
+            product_id TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+        );
+        """
+    )
+    await db.execute(
+        "CREATE INDEX idx_stock_res_order "
+        "ON telegramshop.stock_reservations (order_id)"
+    )
