@@ -51,13 +51,20 @@ def cart_has_physical_items(
 
 
 def validate_stock(
-    cart_items: List[CartItem], products: List[ShopProduct]
+    cart_items: List[CartItem],
+    products: List[ShopProduct],
+    reserved: Optional[dict] = None,
 ) -> List[str]:
-    """Validate cart items against current stock.
+    """Validate cart items against current stock minus existing reservations.
+
+    Args:
+        reserved: dict mapping product_id -> already-reserved quantity.
+                  If None, reservations are not considered (cart updates).
 
     Returns a list of human-readable issue strings (empty = all OK).
     """
     product_map = {p.id: p for p in products}
+    reserved = reserved or {}
     issues: List[str] = []
     for item in cart_items:
         product = product_map.get(item.product_id)
@@ -67,14 +74,16 @@ def validate_stock(
         if product.disabled:
             issues.append(f"{item.title} is no longer available.")
             continue
-        if product.inventory is not None and item.quantity > product.inventory:
-            if product.inventory <= 0:
-                issues.append(f"{item.title} is out of stock.")
-            else:
-                issues.append(
-                    f"{item.title}: only {product.inventory} available"
-                    f" (you have {item.quantity})."
-                )
+        if product.inventory is not None:
+            effective = product.inventory - reserved.get(item.product_id, 0)
+            if item.quantity > effective:
+                if effective <= 0:
+                    issues.append(f"{item.title} is out of stock.")
+                else:
+                    issues.append(
+                        f"{item.title}: only {effective} available"
+                        f" (you have {item.quantity})."
+                    )
     return issues
 
 
@@ -95,8 +104,10 @@ def calculate_cart(
     tax_inclusive = True
 
     for item in cart_items:
-        item_total = item.price * item.quantity
         product = product_map.get(item.product_id)
+        # Use canonical catalog price, never the client-supplied price
+        price = product.price if product else item.price
+        item_total = price * item.quantity
         tax_rate = 0.0
         if product and product.tax_rate is not None:
             tax_rate = product.tax_rate

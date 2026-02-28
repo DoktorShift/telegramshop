@@ -259,11 +259,19 @@ async def get_stats(shop_ids: list[str]) -> dict:
         params,
     )
 
-    # Customers
-    cust_row = await db.fetchone(
+    # Visitors (everyone in customers table)
+    visitors_row = await db.fetchone(
         f"""SELECT COUNT(*) as cnt
         FROM telegramshop.customers
         WHERE shop_id IN ({placeholders})""",
+        params,
+    )
+
+    # Customers (distinct chat_ids with at least one paid order)
+    buyers_row = await db.fetchone(
+        f"""SELECT COUNT(DISTINCT telegram_chat_id) as cnt
+        FROM telegramshop.orders
+        WHERE shop_id IN ({placeholders}) AND status = 'paid'""",
         params,
     )
 
@@ -285,7 +293,8 @@ async def get_stats(shop_ids: list[str]) -> dict:
         "total_messages": _int(msg_row, "total"),
         "open_returns": _int(ret_row, "open_count"),
         "total_returns": _int(ret_row, "total"),
-        "customers": _int(cust_row, "cnt"),
+        "visitors": _int(visitors_row, "cnt"),
+        "customers": _int(buyers_row, "cnt"),
     }
 
 
@@ -459,6 +468,61 @@ async def update_order_fulfillment(
             "fulfillment_note": fulfillment_note,
         },
     )
+
+
+# --- Stock Reservations ---
+
+
+async def create_stock_reservations(
+    order_id: str, shop_id: str, items: list[tuple[str, int]]
+) -> None:
+    """Reserve stock for an order. Called at checkout time."""
+    for product_id, quantity in items:
+        res_id = urlsafe_short_hash()
+        await db.execute(
+            """INSERT INTO telegramshop.stock_reservations
+               (id, order_id, shop_id, product_id, quantity)
+               VALUES (:id, :order_id, :shop_id, :product_id, :quantity)""",
+            {
+                "id": res_id,
+                "order_id": order_id,
+                "shop_id": shop_id,
+                "product_id": product_id,
+                "quantity": quantity,
+            },
+        )
+
+
+async def get_stock_reservations(order_id: str) -> list[dict]:
+    """Get all stock reservations for an order."""
+    rows = await db.fetchall(
+        """SELECT product_id, quantity
+           FROM telegramshop.stock_reservations
+           WHERE order_id = :order_id""",
+        {"order_id": order_id},
+    )
+    return [dict(row) for row in rows]
+
+
+async def delete_stock_reservations(order_id: str) -> None:
+    """Release stock reservations (on expiry or after confirmed deduction)."""
+    await db.execute(
+        "DELETE FROM telegramshop.stock_reservations WHERE order_id = :order_id",
+        {"order_id": order_id},
+    )
+
+
+async def get_reserved_quantity(shop_id: str, product_id: str) -> int:
+    """Total reserved quantity for a product across all pending orders."""
+    row = await db.fetchone(
+        """SELECT COALESCE(SUM(quantity), 0) as total
+           FROM telegramshop.stock_reservations
+           WHERE shop_id = :shop_id AND product_id = :product_id""",
+        {"shop_id": shop_id, "product_id": product_id},
+    )
+    if row:
+        return int(row.total) if hasattr(row, "total") else int(row[0])
+    return 0
 
 
 # --- Messages ---
@@ -809,8 +873,11 @@ async def get_total_available_credit(shop_id: str, chat_id: int) -> int:
 
 async def use_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
     """
-    Apply credits to a purchase. Returns the amount actually deducted.
-    Credits are consumed in FIFO order (oldest first).
+    Atomically apply credits to a purchase (FIFO, oldest first).
+
+    Each credit row is deducted with a conditional UPDATE that guarantees
+    we never exceed the available balance, even under concurrent requests.
+    Returns the amount actually deducted.
     """
     credits = await get_available_credits(shop_id, chat_id)
     remaining = amount_sats
@@ -821,12 +888,17 @@ async def use_credits(shop_id: str, chat_id: int, amount_sats: int) -> int:
             break
         available = credit.amount_sats - credit.used_sats
         use = min(available, remaining)
-        await db.execute(
-            "UPDATE telegramshop.credits SET used_sats = used_sats + :use WHERE id = :id",
+        # Atomic: only deducts if sufficient balance remains on this row
+        result = await db.execute(
+            """UPDATE telegramshop.credits
+               SET used_sats = used_sats + :use
+               WHERE id = :id
+               AND amount_sats - used_sats >= :use""",
             {"id": credit.id, "use": use},
         )
-        remaining -= use
-        total_used += use
+        if result and result.rowcount > 0:
+            remaining -= use
+            total_used += use
 
     return total_used
 
@@ -894,6 +966,7 @@ async def expire_stale_pending_orders(shop_id: str) -> int:
                 await restore_credits(
                     order.shop_id, order.telegram_chat_id, order.credit_used
                 )
+            await delete_stock_reservations(order.id)
             count += 1
     return count
 
@@ -1002,6 +1075,34 @@ async def get_customers(shop_id: str) -> list[Customer]:
         {"shop_id": shop_id},
     )
     return [Customer(**dict(row)) for row in rows]
+
+
+async def get_buyers(shop_id: str) -> list[dict]:
+    """Return buyers (customers with at least one paid order) with aggregated data."""
+    rows = await db.fetchall(
+        """SELECT
+            o.telegram_chat_id as chat_id,
+            MAX(o.telegram_username) as username,
+            MAX(c.first_name) as first_name,
+            COUNT(*) as order_count,
+            SUM(o.amount_sats) as total_spent_sats,
+            MAX(o.timestamp) as last_order_date
+        FROM telegramshop.orders o
+        LEFT JOIN telegramshop.customers c
+            ON c.shop_id = o.shop_id AND c.chat_id = o.telegram_chat_id
+        WHERE o.shop_id = :shop_id AND o.status = 'paid'
+        GROUP BY o.telegram_chat_id
+        ORDER BY last_order_date DESC""",
+        {"shop_id": shop_id},
+    )
+    result = []
+    for row in rows:
+        r = dict(row)
+        chat_id = r["chat_id"]
+        credit_balance = await get_total_available_credit(shop_id, chat_id)
+        r["credit_balance_sats"] = credit_balance
+        result.append(r)
+    return result
 
 
 async def get_customer_by_chat(

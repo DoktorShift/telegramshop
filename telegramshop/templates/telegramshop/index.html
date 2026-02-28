@@ -385,8 +385,11 @@
                   class="q-mr-xs"
                   style="font-size: 10px"
                 >{% raw %}{{ stats.shops_live }}{% endraw %} live</q-badge>
-                <span v-if="stats.customers > 0" class="text-caption">
-                  {% raw %}{{ stats.customers }}{% endraw %} customers
+                <span v-if="stats.visitors > 0" class="text-caption">
+                  {% raw %}{{ stats.visitors }}{% endraw %} visitors
+                </span>
+                <span v-if="stats.customers > 0" class="text-caption q-ml-xs">
+                  &middot; {% raw %}{{ stats.customers }}{% endraw %} customers
                 </span>
               </q-item-label>
             </q-item-section>

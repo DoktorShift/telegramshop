@@ -168,6 +168,71 @@ a { color: var(--admin-accent); text-decoration: none; }
   flex: 1;
 }
 
+/* ===== Clickable Stat Cards ===== */
+
+.stat-card[onclick] { cursor: pointer; user-select: none; }
+.stat-card[onclick]:active { transform: scale(0.97); }
+
+/* ===== Person Cards (Visitors / Buyers) ===== */
+
+.person-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--tg-theme-section-bg-color, var(--tg-theme-secondary-bg-color, #f4f4f5));
+  border-radius: var(--tma-radius);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  position: relative;
+  min-height: 44px;
+}
+.person-card:active { transform: scale(0.98); }
+
+.person-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--admin-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.person-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.person-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.person-detail {
+  font-size: 13px;
+  color: var(--tg-theme-hint-color, #999);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.person-arrow {
+  font-size: 20px;
+  color: var(--tg-theme-hint-color, #ccc);
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
 /* ===== Quick Actions ===== */
 
 .quick-actions {

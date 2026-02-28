@@ -10,6 +10,8 @@ from lnbits.tasks import register_invoice_listener
 from .crud import (
     create_message,
     delete_cart,
+    delete_stock_reservations,
+    ensure_webhook_secret,
     expire_order_if_pending,
     get_cart,
     get_commercials,
@@ -18,15 +20,16 @@ from .crud import (
     get_expired_pending_orders,
     get_order_by_payment_hash,
     get_orders,
+    get_shop,
     get_stale_carts,
     has_commercial_been_sent,
     log_commercial_send,
     restore_credits,
+    set_order_ext_id,
     update_commercial_stock_snapshot,
     update_order_status,
 )
 from .models import Commercial, Customer, Shop
-from .crud import set_order_ext_id
 from .product_sources import deduct_inventory_stock, push_order_to_orders
 from .telegram import TelegramBot, _safe_err
 
@@ -39,6 +42,13 @@ class BotManager:
     async def start_bot(self, shop: Shop) -> None:
         if shop.id in self.bots:
             await self.stop_bot(shop.id)
+
+        # Ensure webhook secret exists (backfill for pre-m004 shops)
+        if not shop.webhook_secret:
+            await ensure_webhook_secret(shop.id)
+            shop = await get_shop(shop.id)
+            if not shop:
+                return
 
         wallet = await get_wallet(shop.wallet)
         if not wallet:
@@ -201,6 +211,9 @@ async def wait_for_paid_invoices() -> None:
                 except Exception as e:
                     logger.error(f"Stock deduction failed: {e}")
 
+            # Release reservation (always, even if bot is not running)
+            await delete_stock_reservations(order.id)
+
             # Push to Orders extension (fire-and-forget)
             if bot:
                 try:
@@ -227,7 +240,7 @@ async def wait_for_paid_invoices() -> None:
 
 
 async def cleanup_expired_orders() -> None:
-    """Restore reserved credits for expired pending orders.
+    """Restore reserved credits and stock for expired pending orders.
 
     Threshold: 16 min (invoice expiry 15 min + 1 min buffer).
     Interval: 60s — worst-case staleness ~2 min.
@@ -244,6 +257,7 @@ async def cleanup_expired_orders() -> None:
                     await restore_credits(
                         order.shop_id, order.telegram_chat_id, order.credit_used
                     )
+                await delete_stock_reservations(order.id)
                 logger.info(
                     f"Expired order {order.id}, restored {order.credit_used} credit sats"
                 )

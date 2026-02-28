@@ -19,7 +19,9 @@ from .crud import (
     create_credit,
     create_message,
     expire_stale_pending_orders,
+    get_buyers,
     get_customer_by_chat,
+    get_customers,
     get_daily_revenue,
     get_message_conversations,
     get_message_count_by_chat,
@@ -539,6 +541,45 @@ async def tma_admin_send_reply(
             logger.warning(f"Admin TMA: Failed to send reply: {e}")
 
     return {"id": msg.id, "timestamp": msg.timestamp}
+
+
+# --- Visitors & Buyers lists ---
+
+
+@tma_admin_api_router.get("/{shop_id}/visitors")
+async def tma_admin_visitors(
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    """List all visitors (everyone who interacted with the bot)."""
+    shop = await _get_shop_or_404(shop_id)
+    _extract_admin(authorization, shop)
+    tma_admin_api_limiter.check(_client_ip(request))
+    customers = await get_customers(shop_id)
+    return [
+        {
+            "chat_id": c.chat_id,
+            "username": c.username,
+            "first_name": c.first_name,
+            "first_seen": c.first_seen,
+            "last_active": c.last_active,
+        }
+        for c in customers
+    ]
+
+
+@tma_admin_api_router.get("/{shop_id}/buyers")
+async def tma_admin_buyers(
+    shop_id: str,
+    authorization: Optional[str] = Header(None),
+    request: Request = None,
+):
+    """List buyers with aggregated order data."""
+    shop = await _get_shop_or_404(shop_id)
+    _extract_admin(authorization, shop)
+    tma_admin_api_limiter.check(_client_ip(request))
+    return await get_buyers(shop_id)
 
 
 # --- Customer profile ---

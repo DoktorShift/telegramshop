@@ -319,6 +319,14 @@ const Admin = {
         this.showScreen('return-detail')
         this.renderReturnDetail(parts[2])
         break
+      case 'visitors':
+        this.showScreen('visitors')
+        this.renderVisitorsList()
+        break
+      case 'buyers':
+        this.showScreen('buyers')
+        this.renderBuyersList()
+        break
       case 'customer':
         this.showScreen('customer')
         this.renderCustomerProfile(parts[2])
@@ -364,7 +372,8 @@ const Admin = {
     // Additional row
     html += '<div class="stats-row">' +
       this._statCard('\ud83d\udcca', s.orders_paid || 0, 'Total Orders') +
-      this._statCard('\ud83d\udc65', s.customers || 0, 'Customers') +
+      this._statCard('\ud83d\udc41', s.visitors || 0, 'Visitors', "Admin.navigate('#/visitors')") +
+      this._statCard('\ud83d\udc65', s.customers || 0, 'Customers', "Admin.navigate('#/buyers')") +
       '</div>'
 
     // Revenue chart placeholder (loaded async)
@@ -445,8 +454,9 @@ const Admin = {
     return String(amount)
   },
 
-  _statCard(icon, value, label) {
-    return '<div class="stat-card">' +
+  _statCard(icon, value, label, onclick) {
+    const click = onclick ? ' onclick="' + onclick + '"' : ''
+    return '<div class="stat-card"' + click + '>' +
       '<div class="stat-icon">' + icon + '</div>' +
       '<div class="stat-value">' + value + '</div>' +
       '<div class="stat-label">' + label + '</div>' +
@@ -461,6 +471,103 @@ const Admin = {
       '</div>' +
       '<div class="quick-action-arrow">\u203a</div>' +
       '</div>'
+  },
+
+  _personCard(chatId, name, initial, detail) {
+    return '<div class="person-card" onclick="Admin.navigate(\'#/customer/' + chatId + '\')">' +
+      '<div class="person-avatar">' + this.escapeHtml(initial) + '</div>' +
+      '<div class="person-info">' +
+      '<div class="person-name">' + this.escapeHtml(name) + '</div>' +
+      '<div class="person-detail">' + this.escapeHtml(detail) + '</div>' +
+      '</div>' +
+      '<div class="person-arrow">\u203a</div>' +
+      '</div>'
+  },
+
+  // ===== Render: Visitors List =====
+  async renderVisitorsList() {
+    const container = document.getElementById('visitors-content')
+    container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>'
+
+    try {
+      const resp = await fetch(this.baseUrl + '/' + this.shopId + '/visitors', {
+        headers: { Authorization: 'tma ' + this.initData }
+      })
+      if (!resp.ok) throw new Error('Failed to load visitors')
+      const visitors = await resp.json()
+
+      let html = '<button class="back-link" onclick="Admin.navigate(\'#/\')">\u2039 Dashboard</button>' +
+        '<div class="section-title">Visitors (' + visitors.length + ')</div>'
+
+      if (visitors.length === 0) {
+        html += '<div class="empty-state">' +
+          '<div class="empty-icon">\ud83d\udc41</div>' +
+          '<h3>No visitors yet</h3>' +
+          '<p>People who interact with your bot will appear here.</p>' +
+          '</div>'
+      } else {
+        visitors.forEach(v => {
+          const name = v.username ? '@' + v.username : v.first_name || 'User ' + v.chat_id
+          const initial = (v.first_name || v.username || '?')[0]
+          const firstSeen = v.first_seen ? 'First seen: ' + this._shortDate(v.first_seen) : ''
+          const lastActive = v.last_active ? 'Last active: ' + this._shortDate(v.last_active) : ''
+          const detail = [firstSeen, lastActive].filter(Boolean).join(' \u00b7 ')
+          html += this._personCard(v.chat_id, name, initial, detail)
+        })
+      }
+
+      container.innerHTML = html
+    } catch (e) {
+      container.innerHTML = '<button class="back-link" onclick="Admin.navigate(\'#/\')">\u2039 Dashboard</button>' +
+        '<div class="empty-state">' +
+        '<div class="empty-icon">\u26a0\ufe0f</div>' +
+        '<h3>Failed to load visitors</h3>' +
+        '<p>' + this.escapeHtml(e.message) + '</p>' +
+        '</div>'
+    }
+  },
+
+  // ===== Render: Buyers List =====
+  async renderBuyersList() {
+    const container = document.getElementById('buyers-content')
+    container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>'
+
+    try {
+      const resp = await fetch(this.baseUrl + '/' + this.shopId + '/buyers', {
+        headers: { Authorization: 'tma ' + this.initData }
+      })
+      if (!resp.ok) throw new Error('Failed to load customers')
+      const buyers = await resp.json()
+
+      let html = '<button class="back-link" onclick="Admin.navigate(\'#/\')">\u2039 Dashboard</button>' +
+        '<div class="section-title">Customers (' + buyers.length + ')</div>'
+
+      if (buyers.length === 0) {
+        html += '<div class="empty-state">' +
+          '<div class="empty-icon">\ud83d\udc65</div>' +
+          '<h3>No customers yet</h3>' +
+          '<p>People who complete a purchase will appear here.</p>' +
+          '</div>'
+      } else {
+        buyers.forEach(b => {
+          const name = b.username ? '@' + b.username : b.first_name || 'User ' + b.chat_id
+          const initial = (b.first_name || b.username || '?')[0]
+          const detail = b.order_count + ' order' + (b.order_count !== 1 ? 's' : '') +
+            ' \u00b7 ' + this._compactSats(b.total_spent_sats || 0) + ' sats' +
+            ((b.credit_balance_sats || 0) > 0 ? ' \u00b7 ' + b.credit_balance_sats + ' sats credit' : '')
+          html += this._personCard(b.chat_id, name, initial, detail)
+        })
+      }
+
+      container.innerHTML = html
+    } catch (e) {
+      container.innerHTML = '<button class="back-link" onclick="Admin.navigate(\'#/\')">\u2039 Dashboard</button>' +
+        '<div class="empty-state">' +
+        '<div class="empty-icon">\u26a0\ufe0f</div>' +
+        '<h3>Failed to load customers</h3>' +
+        '<p>' + this.escapeHtml(e.message) + '</p>' +
+        '</div>'
+    }
   },
 
   // ===== Render: Orders =====
@@ -1356,8 +1463,8 @@ const Admin = {
     return div.innerHTML
   },
 
-  formatDate(val) {
-    if (!val) return ''
+  _parseDate(val) {
+    if (!val) return null
     let d
     if (/^\d{9,13}$/.test(String(val))) {
       const n = Number(val)
@@ -1365,7 +1472,12 @@ const Admin = {
     } else {
       d = new Date(String(val).includes('T') || String(val).includes('Z') ? val : val + 'Z')
     }
-    if (isNaN(d.getTime())) return ''
+    return isNaN(d.getTime()) ? null : d
+  },
+
+  formatDate(val) {
+    const d = this._parseDate(val)
+    if (!d) return ''
     const now = new Date()
     const diff = now - d
     const mins = Math.floor(diff / 60000)
@@ -1379,16 +1491,15 @@ const Admin = {
   },
 
   formatDateAbsolute(val) {
-    if (!val) return ''
-    let d
-    if (/^\d{9,13}$/.test(String(val))) {
-      const n = Number(val)
-      d = new Date(n < 1e12 ? n * 1000 : n)
-    } else {
-      d = new Date(String(val).includes('T') || String(val).includes('Z') ? val : val + 'Z')
-    }
-    if (isNaN(d.getTime())) return ''
+    const d = this._parseDate(val)
+    if (!d) return ''
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  },
+
+  _shortDate(val) {
+    const d = this._parseDate(val)
+    if (!d) return ''
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   },
 
   formatSats(amount) {
