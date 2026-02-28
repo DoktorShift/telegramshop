@@ -10,6 +10,8 @@ from lnbits.tasks import register_invoice_listener
 from .crud import (
     create_message,
     delete_cart,
+    delete_stock_reservations,
+    ensure_webhook_secret,
     expire_order_if_pending,
     get_cart,
     get_commercials,
@@ -18,15 +20,16 @@ from .crud import (
     get_expired_pending_orders,
     get_order_by_payment_hash,
     get_orders,
+    get_shop,
     get_stale_carts,
     has_commercial_been_sent,
     log_commercial_send,
     restore_credits,
+    set_order_ext_id,
     update_commercial_stock_snapshot,
     update_order_status,
 )
 from .models import Commercial, Customer, Shop
-from .crud import set_order_ext_id
 from .product_sources import deduct_inventory_stock, push_order_to_orders
 from .telegram import TelegramBot, _safe_err
 
@@ -39,6 +42,14 @@ class BotManager:
     async def start_bot(self, shop: Shop) -> None:
         if shop.id in self.bots:
             await self.stop_bot(shop.id)
+
+        # Backfill webhook secret for shops created before m001
+        if not shop.webhook_secret:
+            await ensure_webhook_secret(shop.id)
+            shop = await get_shop(shop.id)
+            if not shop:
+                logger.error(f"Shop not found after secret backfill: {shop}")
+                return
 
         wallet = await get_wallet(shop.wallet)
         if not wallet:
@@ -181,6 +192,9 @@ async def wait_for_paid_invoices() -> None:
 
             await update_order_status(order.id, "paid")
 
+            # Release stock reservations (no longer needed — we deduct real stock below)
+            await delete_stock_reservations(order.id)
+
             # Clear cart now that payment is confirmed
             await delete_cart(shop_id, int(chat_id))
 
@@ -240,6 +254,7 @@ async def cleanup_expired_orders() -> None:
                 flipped = await expire_order_if_pending(order.id)
                 if not flipped:
                     continue  # on-demand handler already expired it
+                await delete_stock_reservations(order.id)
                 if order.credit_used > 0:
                     await restore_credits(
                         order.shop_id, order.telegram_chat_id, order.credit_used
