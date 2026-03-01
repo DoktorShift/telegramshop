@@ -1,6 +1,6 @@
 {
   "id": "telegramshop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Telegram Shopping",
   "short_description": "Sell products via Telegram MiniApp with Lightning payments",
   "tile": "/telegramshop/static/image/telegramshop.png",
