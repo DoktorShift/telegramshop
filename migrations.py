@@ -255,5 +255,5 @@ async def m010_stock_reservations(db: Database):
     )
     await db.execute(
         "CREATE INDEX idx_stock_res_order "
-        "ON telegramshop.stock_reservations (order_id)"
+        "ON stock_reservations (order_id)"
     )
