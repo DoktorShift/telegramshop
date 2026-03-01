@@ -1,0 +1,62 @@
+# License
+
+This project is released under a **dual-license model**.
+
+It is available:
+
+- Under the **GNU Affero General Public License v3 (AGPLv3)** for open-source and community use
+- Under a separate **Commercial License** for production or commercial use
+
+---
+
+## Open Source License (AGPLv3)
+
+This software is licensed under the GNU Affero General Public License version 3.
+
+You may:
+
+- Use the software
+- Modify the software
+- Redistribute the software
+
+Under the following conditions:
+
+- If you modify the software and run it on a server
+- And make it accessible to users over a network
+- You must provide the complete corresponding source code of your modifications
+
+Full license text: https://www.gnu.org/licenses/agpl-3.0.html
+
+---
+
+## Commercial License
+
+A commercial license is required if you:
+
+- Use this software in a commercial environment
+- Integrate it into a paid service
+- Operate it in production without publishing your modifications
+- Want to remove AGPL obligations
+
+The commercial license grants you the right to use the software without the copyleft requirements of the AGPL.
+
+For commercial licensing inquiries: https://github.com/DoktorShift
+
+---
+
+## License Summary
+
+| Use Case | License Required |
+|---|---|
+| Private use | AGPLv3 |
+| Open-source project | AGPLv3 |
+| Public SaaS deployment | AGPLv3 (with source disclosure) |
+| Commercial / closed-source use | Commercial License |
+
+---
+
+## Copyright
+
+Copyright (C) 2025-2026 DoktorShift
+
+All rights reserved.

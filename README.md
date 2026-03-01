@@ -114,10 +114,14 @@ Great for word-of-mouth: customers share products with friends without leaving t
 
 ## Documentation
 
-Full docs with setup guides, configuration reference, and AI integration:
+**[docs-telegramshop.netlify.app](https://docs-telegramshop.netlify.app)** — full documentation with setup guides, configuration reference, and AI integration.
 
-- [Getting started](docs/guide/getting-started.md)
-- [Shop configuration](docs/guide/shop-configuration.md)
-- [Telegram Mini App](docs/guide/telegram-mini-app.md)
-- [Marketing campaigns](docs/guide/commercials.md)
-- [AI agent guide](docs/ai/agent-readme.md)
+
+## License
+
+This project is dual-licensed:
+
+- **AGPLv3** — free for open-source and community use. If you modify and deploy it as a network service, you must publish your source code.
+- **Commercial License** — for closed-source, commercial, or production use without AGPL obligations.
+
+See [LICENSE](LICENSE) for full details. For commercial licensing inquiries: [DoktorShift](https://github.com/DoktorShift)
