@@ -8,6 +8,8 @@ const TMA = {
   initData: null,
   chatId: null,
   username: null,
+  firstName: null,
+  photoUrl: null,
   botUsername: null,
   shopTitle: '',
   shopCurrency: 'sat',
@@ -48,6 +50,10 @@ const TMA = {
         tg.setBottomBarColor(tg.themeParams.bottom_bar_bg_color || tg.themeParams.bg_color || '#ffffff')
       }
       this.initData = tg.initData
+      const tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user
+      if (tgUser) {
+        this.firstName = tgUser.first_name || null
+      }
     }
 
     // Listen for runtime theme changes
@@ -145,6 +151,7 @@ const TMA = {
       })
       this.chatId = data.chat_id
       this.username = data.username
+      this.photoUrl = data.photo_url || null
       this.botUsername = data.bot_username || null
       this.shopTitle = data.shop_title
       if (this.shopTitle) {
@@ -495,6 +502,29 @@ const TMA = {
 
   // ===== Render: Home =====
   renderHome() {
+    // Greeting strip
+    const greetingStrip = document.getElementById('greeting-strip')
+    if (greetingStrip) {
+      const name = this.firstName || this.username || null
+      if (this.authenticated && name) {
+        const avatarEl = document.getElementById('greeting-avatar')
+        const initial = this.escapeHtml(name[0].toUpperCase())
+        if (this.photoUrl) {
+          avatarEl.className = 'greeting-avatar'
+          avatarEl.innerHTML = '<img src="' + this.escapeHtml(this.photoUrl) +
+            '" alt="" onerror="this.remove();this.parentElement.classList.add(\'fallback\');this.parentElement.textContent=\'' +
+            initial + '\'">'
+        } else {
+          avatarEl.className = 'greeting-avatar fallback'
+          avatarEl.textContent = initial
+        }
+        document.getElementById('greeting-text').textContent = 'Hi, ' + name
+        greetingStrip.style.display = ''
+      } else {
+        greetingStrip.style.display = 'none'
+      }
+    }
+
     // Credit strip (only when balance > 0)
     const creditStrip = document.getElementById('home-credit-strip')
     const creditText = document.getElementById('home-credit-text')
@@ -1455,11 +1485,11 @@ const TMA = {
     const url = 'https://t.me/' + this.botUsername + '?startapp=product_' + productId
     const text = product.title + ' — ' + this.formatPrice(product.price)
 
-    // Use Telegram's native share if available
+    // Use Telegram's native share dialog with the deep link
     const tg = window.Telegram && window.Telegram.WebApp
-    if (tg && tg.switchInlineQuery) {
-      // switchInlineQuery opens the inline query picker with pre-filled text
-      tg.switchInlineQuery(product.title, ['users', 'groups', 'channels'])
+    if (tg && tg.openTelegramLink) {
+      const shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text)
+      tg.openTelegramLink(shareUrl)
       return
     }
 

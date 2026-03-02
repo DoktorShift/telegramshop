@@ -99,6 +99,49 @@ a { color: var(--tg-theme-link-color, #2481cc); text-decoration: none; }
   padding: 0 4px;
 }
 
+/* ===== Greeting Strip (home screen) ===== */
+
+.greeting-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: var(--tma-gap);
+  border-radius: var(--tma-radius);
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+}
+
+.greeting-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.greeting-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.greeting-avatar.fallback {
+  background: var(--tg-theme-button-color, #2481cc);
+  color: var(--tg-theme-button-text-color, #fff);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.greeting-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tg-theme-text-color, #000);
+}
+
 /* ===== Credit Strip (home screen) ===== */
 
 .credit-strip {
