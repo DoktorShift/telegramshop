@@ -1,8 +1,8 @@
 {
   "id": "telegramshop",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "name": "Telegram Shopping",
-  "short_description": "Sell products via Telegram MiniApp with Lightning payments",
+  "short_description": "Sell products with Lightning payments by Telegram MiniApp",
   "tile": "/telegramshop/static/image/telegramshop.png",
   "min_lnbits_version": "1.4.0",
   "donate": "u60311@blink.sv",
@@ -16,8 +16,8 @@
   "images": [],
   "description_md": "https://raw.githubusercontent.com/DoktorShift/telegramshop/main/description.md",
   "terms_and_conditions_md": "https://raw.githubusercontent.com/DoktorShift/telegramshop/main/toc.md",
-  "license": "MIT",
+  "license": "AGPLv3",
   "paid_features": "",
-  "tags": ["Telegram", "Shopping", "E-Commerce", "Lightning", "Inventory"],
+  "tags": ["Telegram", "Shopping", "E-Commerce", "Lightning", "Inventory", "Orders"],
   "hidden": false
 }
