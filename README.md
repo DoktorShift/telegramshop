@@ -48,7 +48,7 @@ Products live in the [Inventory](https://github.com/lnbits/inventory) extension.
 **AI-ready API**
 - Full REST API for headless store management
 - Create, configure, and run a shop entirely through API calls
-- Agent guide and ready-made system prompt included — see [docs/ai](docs/ai/)
+- Agent guide and ready-made system prompt included — see [docs/ai](https://docs-telegramshop.netlify.app/ai/)
 
 
 ## Quick start
