@@ -313,6 +313,7 @@ class TmaAuthRequest(BaseModel):
 class TmaAuthResponse(BaseModel):
     chat_id: int
     username: Optional[str] = None
+    photo_url: Optional[str] = None
     shop_title: str
     shop_currency: str
     checkout_mode: str
@@ -346,6 +347,7 @@ class TmaUser(BaseModel):
     chat_id: int
     username: Optional[str] = None
     first_name: Optional[str] = None
+    photo_url: Optional[str] = None
 
 
 # --- TMA Admin Request/Response Models ---

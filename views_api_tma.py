@@ -199,6 +199,7 @@ async def tma_auth(data: TmaAuthRequest, request: Request):
     return TmaAuthResponse(
         chat_id=user.chat_id,
         username=user.username,
+        photo_url=user.photo_url,
         shop_title=shop.title,
         shop_currency=shop.currency,
         checkout_mode=shop.checkout_mode,

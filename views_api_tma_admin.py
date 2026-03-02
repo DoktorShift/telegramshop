@@ -8,11 +8,14 @@ using the shop's bot_token. Extra gate: chat_id == int(shop.admin_chat_id).
 Calls CRUD functions directly — no internal HTTP calls needed.
 """
 
+import time
 from http import HTTPStatus
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Header, Request
+import httpx
+from fastapi import APIRouter, HTTPException, Header, Query, Request
 from loguru import logger
+from starlette.responses import Response
 
 from .helpers import tma_admin_auth_limiter, tma_admin_api_limiter
 from .crud import (
@@ -605,3 +608,111 @@ async def tma_admin_customer_profile(
             for o in orders[:10]
         ],
     }
+
+
+# --- Avatar proxy ---
+
+# In-memory cache: (shop_id, chat_id) → (image_bytes, content_type, timestamp)
+_avatar_cache: dict[tuple[str, int], tuple[bytes, str, float]] = {}
+_AVATAR_TTL = 1800  # 30 minutes
+_AVATAR_MAX_CACHE = 500
+_NO_PHOTO = b""  # sentinel for "user has no photo"
+
+
+def _evict_stale_avatars() -> None:
+    """Remove expired entries when cache grows too large."""
+    if len(_avatar_cache) <= _AVATAR_MAX_CACHE:
+        return
+    now = time.time()
+    expired = [k for k, (_, _, ts) in _avatar_cache.items() if now - ts > _AVATAR_TTL]
+    for k in expired:
+        del _avatar_cache[k]
+
+
+@tma_admin_api_router.get("/{shop_id}/avatar/{chat_id}")
+async def tma_admin_avatar(
+    shop_id: str,
+    chat_id: int,
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    t: Optional[str] = Query(None),
+):
+    """Proxy a customer's Telegram profile photo (cached 30 min).
+
+    Accepts auth via Authorization header or ?t= query param
+    (needed for <img> tags which cannot send custom headers).
+    """
+    tma_admin_api_limiter.check(_client_ip(request))
+    shop = await _get_shop_or_404(shop_id)
+
+    # Accept auth from header or query param (for <img src="...?t=initData">)
+    auth_header = authorization
+    if not auth_header and t:
+        auth_header = f"tma {t}"
+    _extract_admin(auth_header, shop)
+
+    # Check cache
+    cache_key = (shop_id, chat_id)
+    now = time.time()
+    cached = _avatar_cache.get(cache_key)
+    if cached:
+        data, ct, ts = cached
+        if now - ts < _AVATAR_TTL:
+            if data is _NO_PHOTO:
+                raise HTTPException(HTTPStatus.NOT_FOUND, "No photo")
+            return Response(
+                content=data, media_type=ct,
+                headers={"Cache-Control": "public, max-age=1800"},
+            )
+
+    # Fetch from Telegram Bot API
+    base = f"https://api.telegram.org/bot{shop.bot_token}"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # Step 1: get profile photos
+            r1 = await client.post(
+                f"{base}/getUserProfilePhotos",
+                json={"user_id": chat_id, "limit": 1},
+            )
+            result = r1.json()
+            photos = result.get("result", {}).get("photos", [])
+            if not photos or not photos[0]:
+                _avatar_cache[cache_key] = (_NO_PHOTO, "", now)
+                raise HTTPException(HTTPStatus.NOT_FOUND, "No photo")
+
+            # Pick medium-resolution thumbnail
+            sizes = photos[0]
+            chosen = sizes[min(1, len(sizes) - 1)]
+
+            # Step 2: get file path
+            r2 = await client.post(
+                f"{base}/getFile",
+                json={"file_id": chosen["file_id"]},
+            )
+            file_path = r2.json().get("result", {}).get("file_path")
+            if not file_path:
+                _avatar_cache[cache_key] = (_NO_PHOTO, "", now)
+                raise HTTPException(HTTPStatus.NOT_FOUND, "No photo")
+
+            # Step 3: download image
+            r3 = await client.get(
+                f"https://api.telegram.org/file/bot{shop.bot_token}/{file_path}"
+            )
+            if r3.status_code != 200:
+                _avatar_cache[cache_key] = (_NO_PHOTO, "", now)
+                raise HTTPException(HTTPStatus.NOT_FOUND, "No photo")
+
+            img_bytes = r3.content
+            content_type = r3.headers.get("content-type", "image/jpeg")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Avatar fetch failed for chat_id={chat_id}: {e}")
+        raise HTTPException(HTTPStatus.NOT_FOUND, "No photo")
+
+    _evict_stale_avatars()
+    _avatar_cache[cache_key] = (img_bytes, content_type, now)
+    return Response(
+        content=img_bytes, media_type=content_type,
+        headers={"Cache-Control": "public, max-age=1800"},
+    )

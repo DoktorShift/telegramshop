@@ -592,7 +592,7 @@ const Admin = {
       '<span class="order-id">#' + order.id.substring(0, 8) + '</span>' +
       '<span class="status-badge ' + displayStatus + '">' + displayStatus + '</span>' +
       '</div>' +
-      '<div class="order-customer">\ud83d\udc64 ' + this._usernameHtml(order.telegram_username, order.telegram_chat_id) + '</div>' +
+      '<div class="order-customer">' + this._emojiAvatarHtml(order.telegram_chat_id, order.telegram_username) + '</div>' +
       '<div class="order-items-summary">' + this.escapeHtml(itemsSummary) + '</div>' +
       '<div class="order-footer">' +
       '<span class="order-amount">' + this.formatSats(order.amount_sats) + '</span>' +
@@ -669,7 +669,7 @@ const Admin = {
       // Customer info
       html += '<div class="section-label">Customer</div>' +
         '<div class="buyer-info">' +
-        '<div class="buyer-row">\ud83d\udc64 ' + this._usernameHtml(order.telegram_username, order.telegram_chat_id) + '</div>'
+        '<div class="buyer-row">' + this._emojiAvatarHtml(order.telegram_chat_id, order.telegram_username) + '</div>'
       if (order.buyer_email) {
         html += '<div class="buyer-row">\ud83d\udce7 ' + this.escapeHtml(order.buyer_email) + '</div>'
       }
@@ -836,7 +836,7 @@ const Admin = {
 
         const hasUnread = conv.unread_count > 0
         html += '<div class="conversation-card" onclick="Admin.haptic(\'selection\');Admin.navigate(\'' + threadRoute + '\')">' +
-          '<div class="conversation-avatar">' + this.escapeHtml(initial) + '</div>' +
+          this._avatarHtml(conv.chat_id, initial, 'conversation-avatar') +
           '<div class="conversation-info"' + (hasUnread ? ' style="padding-right:36px"' : '') + '>' +
           '<div class="conversation-top">' +
           '<div class="conversation-username">' + this.escapeHtml(username) + '</div>' +
@@ -895,7 +895,7 @@ const Admin = {
 
       // Thread header
       html += '<div class="thread-header">' +
-        '<div class="thread-header-avatar">' + this.escapeHtml(initial) + '</div>' +
+        this._avatarHtml(chatId, initial, 'thread-header-avatar') +
         '<div class="thread-header-info">' +
         '<div class="thread-header-name">' +
         this._usernameHtml(username, chatId) +
@@ -1053,7 +1053,7 @@ const Admin = {
           '<span class="order-id">\ud83d\udce6 #' + ret.order_id.substring(0, 8) + '</span>' +
           '<span class="return-badge ' + ret.status + '">' + ret.status + '</span>' +
           '</div>' +
-          '<div class="return-customer">\ud83d\udc64 ' + this.escapeHtml(customer) + '</div>' +
+          '<div class="return-customer">' + this._emojiAvatarHtml(ret.chat_id, ret.telegram_username) + '</div>' +
           (reason ? '<div class="return-reason">' + this.escapeHtml(reason) + '</div>' : '') +
           '<div class="return-footer">' +
           '<span class="order-amount">' + this.formatSats(ret.refund_amount_sats) + '</span>' +
@@ -1108,7 +1108,7 @@ const Admin = {
         '<a onclick="Admin.haptic(\'selection\');Admin.navigate(\'#/order/' + ret.order_id + '\')" style="cursor:pointer">' +
         '\ud83d\udce6 #' + ret.order_id.substring(0, 8) + '</a>' +
         '</div>' +
-        '<div class="buyer-row">\ud83d\udc64 ' + this._usernameHtml(ret.telegram_username, ret.chat_id) + '</div>' +
+        '<div class="buyer-row">' + this._emojiAvatarHtml(ret.chat_id, ret.telegram_username) + '</div>' +
         '</div>'
 
       // Reason
@@ -1337,7 +1337,7 @@ const Admin = {
       const totalSpent = c.total_spent_sats || 0
 
       html += '<div class="customer-list-card" onclick="Admin.haptic(\'selection\');Admin.navigate(\'#/customer/' + c.chat_id + '\')">' +
-        '<div class="customer-list-avatar">' + initial + '</div>' +
+        this._avatarHtml(c.chat_id, initial, 'customer-list-avatar') +
         '<div class="customer-list-info">' +
         '<div class="customer-list-name">' + this.escapeHtml(displayName) + '</div>' +
         (subtitle ? '<div class="customer-list-username">' + this.escapeHtml(subtitle) + '</div>' : '') +
@@ -1400,7 +1400,7 @@ const Admin = {
 
       // Profile header
       html += '<div class="profile-header">' +
-        '<div class="profile-avatar">' + this.escapeHtml(initial) + '</div>' +
+        this._avatarHtml(chatId, initial, 'profile-avatar') +
         '<div class="profile-info">' +
         '<h2>' + this.escapeHtml(displayName) + '</h2>' +
         (profile.first_seen
@@ -1470,6 +1470,28 @@ const Admin = {
         '<p style="color:var(--tg-theme-destructive-text-color,#e53935)">Failed to load customer profile</p>' +
         '<button class="btn-text mt-md" onclick="window.history.back()">Go back</button></div>'
     }
+  },
+
+  // ===== Avatar Helpers =====
+  _avatarHtml(chatId, initial, sizeClass) {
+    const url = this.baseUrl + '/' + this.shopId + '/avatar/' + chatId +
+      '?t=' + encodeURIComponent(this.initData || '')
+    return '<div class="' + sizeClass + ' avatar-with-photo">' +
+      '<img src="' + url + '" alt="" class="avatar-photo" ' +
+      'onload="this.style.opacity=1" onerror="this.remove()">' +
+      '<span class="avatar-initial">' + this.escapeHtml(initial) + '</span>' +
+      '</div>'
+  },
+
+  _emojiAvatarHtml(chatId, username) {
+    const url = this.baseUrl + '/' + this.shopId + '/avatar/' + chatId +
+      '?t=' + encodeURIComponent(this.initData || '')
+    return '<span class="inline-avatar-wrap">' +
+      '<img src="' + url + '" alt="" class="inline-avatar-photo" ' +
+      'onload="this.style.opacity=1;this.nextElementSibling.style.display=\'none\'" ' +
+      'onerror="this.style.display=\'none\'">' +
+      '<span class="inline-avatar-emoji">\ud83d\udc64</span>' +
+      '</span> ' + this._usernameHtml(username, chatId)
   },
 
   // ===== Username Link Helper =====
