@@ -1362,7 +1362,7 @@ const TMA = {
       '</div>' +
       qrHtml +
       '<div class="payment-actions-row">' +
-      '<button class="btn-tap-to-pay" onclick="TMA.openPayLink()">\u26a1 Pay in Wallet</button>' +
+      '<button class="btn-tap-to-pay" onclick="TMA.shareInvoice()">\u26a1 Share Invoice</button>' +
       '<button class="btn-copy-invoice" onclick="TMA.copyBolt11()">' +
       '<span class="copy-icon">\ud83d\udccb</span> ' + bolt11Short +
       '</button>' +
@@ -1441,39 +1441,24 @@ const TMA = {
     })
   },
 
-  openPayLink() {
+  shareInvoice() {
+    // The native share sheet lets users hand the bolt11 to any installed
+    // Lightning wallet that registers as a share target, or fall back to
+    // pasting it elsewhere. Custom URI schemes (lightning:) are unreliable
+    // inside Telegram's webview, so we don't rely on them.
     const p = this._pendingPayment
     if (!p || !p.bolt11) return
 
-    const tg = window.Telegram && window.Telegram.WebApp
-
-    const doOpen = () => {
-      const params = new URLSearchParams({
-        invoice: p.bolt11,
-        amount: String(p.amount_sats || 0),
-        shop: this.shopTitle || '',
+    if (navigator.share) {
+      navigator.share({
+        title: this.shopTitle || 'Lightning Payment',
+        text: p.bolt11,
+      }).catch(err => {
+        // AbortError = user dismissed the sheet; not a failure.
+        if (err && err.name !== 'AbortError') this.copyBolt11()
       })
-      const redirectUrl = window.location.origin +
-        '/telegramshop/api/v1/tma/pay?' + params.toString()
-
-      if (tg && tg.openLink) {
-        tg.openLink(redirectUrl)
-      } else {
-        window.location.href = 'lightning:' + p.bolt11
-      }
-    }
-
-    if (tg && tg.showPopup) {
-      tg.showPopup({
-        title: 'Open Lightning Wallet',
-        message: 'You will be redirected to a payment page where you can tap to open your wallet and pay the invoice.',
-        buttons: [
-          { id: 'open', type: 'default', text: 'Continue' },
-          { id: 'cancel', type: 'cancel' },
-        ]
-      }, (id) => { if (id === 'open') doOpen() })
     } else {
-      doOpen()
+      this.copyBolt11()
     }
   },
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Shop</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=0.4.0">
 </head>
 <body>
   <div id="app">
@@ -114,6 +114,7 @@
 
   </div>
 
-  <script src="app.js"></script>
+  <!-- Bump ?v= on each release (matches config.json version) to bust WebView caches. -->
+  <script src="app.js?v=0.4.0"></script>
 </body>
 </html>
