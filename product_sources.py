@@ -210,10 +210,11 @@ async def fetch_inventory_products(
                     f"{settings.lnbits_baseurl.rstrip('/')}{raw_img}"
                 )
             else:
-                # Bare asset ID from inventory — resolve to assets API
+                # Bare asset ID from inventory — resolve to assets API.
+                # LNbits exposes public asset binary at /data (not /binary).
                 resolved_urls.append(
                     f"{settings.lnbits_baseurl.rstrip('/')}"
-                    f"/api/v1/assets/{raw_img}/binary"
+                    f"/api/v1/assets/{raw_img}/data"
                 )
         image_url = resolved_urls[0] if resolved_urls else None
 
